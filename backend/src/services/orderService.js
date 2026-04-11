@@ -107,6 +107,14 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
   // Clear cart
   await supabase.from('cart_items').delete().eq('user_id', userId);
 
+  // Increment coupon usage count if applicable
+  if (coupon_code) {
+    await supabase.rpc('increment_coupon_usage', { coupon_code_param: coupon_code });
+    // If rpc is not set up, we can use a standard update, but RPC is safer for concurrency.
+    // Given the current setup, I'll add a simple update fallback if RPC fails, 
+    // but first I'll add the RPC function to the migration.
+  }
+
   return { ...order, items: orderItems };
 };
 

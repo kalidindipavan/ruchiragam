@@ -29,6 +29,7 @@ import ManageProducts from './pages/admin/ManageProducts';
 import ManageOrders from './pages/admin/ManageOrders';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageCoupons from './pages/admin/ManageCoupons';
+import ManageCategories from './pages/admin/ManageCategories';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -70,6 +71,7 @@ function App() {
           <Route path="orders" element={<ManageOrders />} />
           <Route path="users" element={<ManageUsers />} />
           <Route path="coupons" element={<ManageCoupons />} />
+          <Route path="categories" element={<ManageCategories />} />
           <Route path="*" element={<h1 className="text-2xl font-bold text-[var(--saffron-400)]">Admin Page Under Construction</h1>} />
         </Route>
 

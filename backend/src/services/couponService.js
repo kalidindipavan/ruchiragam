@@ -33,6 +33,11 @@ const validateCoupon = async (code, subtotal) => {
     throw new AppError(`Minimum order amount for this coupon is ₹${coupon.min_order_amount}`, 400);
   }
 
+  // Check usage limit
+  if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+    throw new AppError('Coupon usage limit reached', 300);
+  }
+
   // Calculate discount
   let discountAmount = 0;
   if (coupon.discount_type === 'percentage') {

@@ -82,6 +82,7 @@ export default function ManageCoupons() {
       discount_type: formData.get('discount_type'),
       discount_value: Number(formData.get('discount_value')),
       min_order_amount: Number(formData.get('min_order_amount')),
+      usage_limit: formData.get('usage_limit') ? Number(formData.get('usage_limit')) : null,
       max_discount: formData.get('max_discount') ? Number(formData.get('max_discount')) : null,
       expires_at: formData.get('expires_at') ? new Date(formData.get('expires_at') as string).toISOString() : null,
       is_active: formData.get('is_active') === 'true',
@@ -106,6 +107,7 @@ export default function ManageCoupons() {
                 <th className="px-6 py-4 font-bold">Code</th>
                 <th className="px-6 py-4 font-bold">Discount</th>
                 <th className="px-6 py-4 font-bold">Min Order</th>
+                <th className="px-6 py-4 font-bold">Usage</th>
                 <th className="px-6 py-4 font-bold">Expiry</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold text-right">Actions</th>
@@ -139,6 +141,12 @@ export default function ManageCoupons() {
                     </td>
                     <td className="px-6 py-4 text-[var(--text-secondary)]">
                       {formatINR(coupon.min_order_amount)}
+                    </td>
+                    <td className="px-6 py-4 text-[var(--text-secondary)]">
+                      <div className="flex flex-col">
+                        <span className="text-[var(--text-primary)] font-medium">{coupon.usage_count} / {coupon.usage_limit || '∞'}</span>
+                        <span className="text-[xs] opacity-60">Uses</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-[var(--text-secondary)]">
                       {coupon.expires_at ? (
@@ -218,9 +226,14 @@ export default function ManageCoupons() {
                     <Input name="min_order_amount" type="number" defaultValue={editingCoupon?.min_order_amount || 0} placeholder="0" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-[var(--text-secondary)]">Max Discount (₹)</label>
-                    <Input name="max_discount" type="number" defaultValue={editingCoupon?.max_discount} placeholder="Optional" />
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Usage Limit</label>
+                    <Input name="usage_limit" type="number" defaultValue={editingCoupon?.usage_limit} placeholder="Unlimited" />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[var(--text-secondary)]">Max Discount (₹)</label>
+                  <Input name="max_discount" type="number" defaultValue={editingCoupon?.max_discount} placeholder="Optional" />
                 </div>
 
                 <div className="space-y-1.5">

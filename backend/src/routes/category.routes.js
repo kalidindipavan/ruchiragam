@@ -10,43 +10,46 @@ const { AppError } = require('../middleware/errorHandler');
 const { authenticate, authorize } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
-// GET /api/categories
+const categoryService = require('../services/categoryService');
+const { sendSuccess, sendCreated } = require('../utils/apiResponse');
+
+// GET /api/categories — Public list
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name, slug, description, image_url, product_count')
-    .eq('is_active', true)
-    .order('name');
-
-  if (error) throw new AppError('Failed to fetch categories', 500);
-  return sendSuccess(res, data, 'Categories fetched');
+  const categories = await categoryService.getAllCategories(false);
+  return sendSuccess(res, categories, 'Categories fetched');
 });
 
-// GET /api/categories/:slug
+// GET /api/categories/:slug — Single category by slug
 router.get('/:slug', async (req, res) => {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name, slug, description, image_url')
-    .eq('slug', req.params.slug)
-    .single();
-
-  if (error || !data) throw new AppError('Category not found', 404);
-  return sendSuccess(res, data, 'Category fetched');
+  const category = await categoryService.getCategoryBySlug(req.params.slug);
+  return sendSuccess(res, category, 'Category fetched');
 });
 
-// POST /api/categories — Admin only
-router.post('/', authenticate, authorize('admin'), async (req, res) => {
-  const { name, description, image_url } = req.body;
-  const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+// ─── ADMIN ROUTES ───────────────────────────────────────────────────────────
+router.use(authenticate, authorize('admin'));
 
-  const { data, error } = await supabase
-    .from('categories')
-    .insert({ id: uuidv4(), name, slug, description, image_url, is_active: true })
-    .select('*')
-    .single();
+// GET /api/categories/admin — Full list for management
+router.get('/admin/all', async (req, res) => {
+  const categories = await categoryService.getAllCategories(true);
+  return sendSuccess(res, categories, 'All categories fetched for admin');
+});
 
-  if (error) throw new AppError('Failed to create category', 500);
-  return res.status(201).json({ success: true, data, message: 'Category created' });
+// POST /api/categories — Create category
+router.post('/', async (req, res) => {
+  const category = await categoryService.createCategory(req.body);
+  return sendCreated(res, category, 'Category created successfully');
+});
+
+// PATCH /api/categories/:id — Update category
+router.patch('/:id', async (req, res) => {
+  const category = await categoryService.updateCategory(req.params.id, req.body);
+  return sendSuccess(res, category, 'Category updated successfully');
+});
+
+// DELETE /api/categories/:id — Delete category
+router.delete('/:id', async (req, res) => {
+  await categoryService.deleteCategory(req.params.id);
+  return sendSuccess(res, null, 'Category deleted successfully');
 });
 
 module.exports = router;

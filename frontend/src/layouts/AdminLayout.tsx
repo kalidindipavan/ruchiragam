@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Utensils, Users, Ticket } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Utensils, Users, Ticket, LayoutGrid } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 export default function AdminLayout() {
@@ -17,6 +17,7 @@ export default function AdminLayout() {
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
     { name: 'Users', path: '/admin/users', icon: Users },
     { name: 'Coupons', path: '/admin/coupons', icon: Ticket },
+    { name: 'Categories', path: '/admin/categories', icon: LayoutGrid },
   ];
 
   return (
