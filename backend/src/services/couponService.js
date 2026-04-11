@@ -55,4 +55,71 @@ const validateCoupon = async (code, subtotal) => {
   };
 };
 
-module.exports = { validateCoupon };
+/**
+ * Get all coupons (Admin).
+ */
+const getAllCoupons = async () => {
+  const { data, error } = await supabase
+    .from('coupons')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new AppError('Failed to fetch coupons', 500);
+  return data;
+};
+
+/**
+ * Create a new coupon (Admin).
+ */
+const createCoupon = async (couponData) => {
+  const { data, error } = await supabase
+    .from('coupons')
+    .insert([{
+      ...couponData,
+      code: couponData.code.toUpperCase().trim()
+    }])
+    .select('*')
+    .single();
+
+  if (error) {
+    if (error.code === '23505') throw new AppError('Coupon code already exists', 400);
+    throw new AppError('Failed to create coupon', 500);
+  }
+  return data;
+};
+
+/**
+ * Update a coupon (Admin).
+ */
+const updateCoupon = async (id, couponData) => {
+  const { data, error } = await supabase
+    .from('coupons')
+    .update({
+      ...couponData,
+      code: couponData.code ? couponData.code.toUpperCase().trim() : undefined
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) {
+    if (error.code === '23505') throw new AppError('Coupon code already exists', 400);
+    throw new AppError('Failed to update coupon', 500);
+  }
+  return data;
+};
+
+/**
+ * Delete a coupon (Admin).
+ */
+const deleteCoupon = async (id) => {
+  const { error } = await supabase
+    .from('coupons')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new AppError('Failed to delete coupon', 500);
+  return true;
+};
+
+module.exports = { validateCoupon, getAllCoupons, createCoupon, updateCoupon, deleteCoupon };

@@ -23,4 +23,46 @@ const validateCoupon = async (req, res) => {
   return sendSuccess(res, result, 'Coupon validated successfully');
 };
 
-module.exports = { validateCoupon };
+/**
+ * Get all coupons.
+ * GET /api/coupons
+ */
+const getAllCoupons = async (req, res) => {
+  const coupons = await couponService.getAllCoupons();
+  return sendSuccess(res, coupons, 'Coupons fetched successfully');
+};
+
+/**
+ * Create a new coupon.
+ * POST /api/coupons
+ */
+const createCoupon = async (req, res) => {
+  const coupon = await couponService.createCoupon(req.body);
+  return sendSuccess(res, coupon, 'Coupon created successfully');
+};
+
+/**
+ * Update a coupon.
+ * PATCH /api/coupons/:id
+ */
+const updateCoupon = async (req, res) => {
+  const coupon = await couponService.updateCoupon(req.params.id, req.body);
+  return sendSuccess(res, coupon, 'Coupon updated successfully');
+};
+
+/**
+ * Delete a coupon.
+ * DELETE /api/coupons/:id
+ */
+const deleteCoupon = async (req, res) => {
+  await couponService.deleteCoupon(req.params.id);
+  return sendSuccess(res, null, 'Coupon deleted successfully');
+};
+
+module.exports = { 
+  validateCoupon, 
+  getAllCoupons, 
+  createCoupon, 
+  updateCoupon, 
+  deleteCoupon 
+};
