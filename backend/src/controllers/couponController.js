@@ -4,28 +4,23 @@
  */
 
 const couponService = require('../services/couponService');
-const { catchAsync } = require('../utils/catchAsync');
+const { sendSuccess } = require('../utils/apiResponse');
+const { AppError } = require('../middleware/errorHandler');
 
 /**
  * Validate coupon code.
  * POST /api/coupons/validate
  */
-const validateCoupon = catchAsync(async (req, res) => {
+const validateCoupon = async (req, res) => {
   const { code, subtotal } = req.body;
 
   if (!code || !subtotal) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Code and subtotal are required'
-    });
+    throw new AppError('Code and subtotal are required', 400);
   }
 
   const result = await couponService.validateCoupon(code, subtotal);
 
-  res.status(200).json({
-    status: 'success',
-    data: result
-  });
-});
+  return sendSuccess(res, result, 'Coupon validated successfully');
+};
 
 module.exports = { validateCoupon };
