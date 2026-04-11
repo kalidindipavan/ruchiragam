@@ -45,7 +45,7 @@ app.use(
         scriptSrc: ["'self'", 'https://checkout.razorpay.com', 'https://js.stripe.com'],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-        connectSrc: ["'self'", 'https://api.stripe.com', 'https://api.razorpay.com'],
+        connectSrc: ["'self'", 'https://api.stripe.com', 'https://api.razorpay.com', 'https://ruchiragam.onrender.com'],
         frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com'],
       },
     },
@@ -58,6 +58,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   /\.railway\.app$/, // Allow any Railway subdomain
+  /\.vercel\.app$/, // Allow any Vercel subdomain
 ];
 
 app.use(
