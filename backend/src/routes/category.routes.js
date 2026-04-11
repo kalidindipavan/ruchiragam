@@ -4,14 +4,10 @@
 
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../config/db');
-const { sendSuccess } = require('../utils/apiResponse');
+const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, authorize } = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
-
 const categoryService = require('../services/categoryService');
-const { sendSuccess, sendCreated } = require('../utils/apiResponse');
 
 // GET /api/categories — Public list
 router.get('/', async (req, res) => {
