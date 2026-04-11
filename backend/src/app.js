@@ -32,6 +32,7 @@ const aiRoutes = require('./routes/ai.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const userRoutes = require('./routes/user.routes');
 const statsRoutes = require('./routes/stats.routes');
+const couponRoutes = require('./routes/couponRoutes');
 
 const app = express();
 
@@ -137,6 +138,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // ─── 404 + Error Handlers ─────────────────────────────────────────────────────
 

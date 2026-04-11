@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { CreditCard, Loader2, ArrowLeft } from 'lucide-react';
+import { CreditCard, Loader2, ArrowLeft, Ticket, Tag, X } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../lib/apiClient';
@@ -41,14 +41,40 @@ export default function Checkout() {
   
   const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay'>('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discountAmount: number} | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsValidatingCoupon(true);
+    try {
+      const { data: response } = await apiClient.post('/coupons/validate', { 
+        code: couponCode.trim(), 
+        subtotal 
+      });
+      setAppliedCoupon(response.data);
+      toast.success(`Coupon "${response.data.code}" applied!`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Invalid coupon code');
+      setAppliedCoupon(null);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+  };
 
   const { register, handleSubmit, formState: { errors } } = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
   });
 
   const deliveryFee = subtotal > 500 ? 0 : 50;
-  const tax = Math.round(subtotal * 0.05 * 100) / 100;
-  const total = subtotal + deliveryFee + tax;
+  const discountAmount = appliedCoupon?.discountAmount || 0;
+  const total = subtotal + deliveryFee - discountAmount;
 
   const onSubmit = async (data: AddressFormValues) => {
     if (items.length === 0) {
@@ -69,6 +95,7 @@ export default function Checkout() {
         },
         payment_provider: paymentProvider,
         special_instructions: data.special_instructions,
+        coupon_code: appliedCoupon?.code,
       });
 
       const orderId = orderResponse.data.id;
@@ -282,10 +309,57 @@ export default function Checkout() {
                              {deliveryFee === 0 ? <span className="text-[var(--leaf-500)]">Free</span> : formatINR(deliveryFee)}
                            </span>
                         </div>
-                        <div className="flex justify-between text-[var(--text-secondary)]">
-                           <span>Tax (5% GST)</span>
-                           <span className="tabular-nums font-medium text-[var(--text-primary)]">{formatINR(tax)}</span>
-                        </div>
+
+                        {appliedCoupon && (
+                           <div className="flex justify-between text-[var(--leaf-500)] font-medium">
+                              <span className="flex items-center gap-1"><Tag className="w-3 h-3"/> Discount ({appliedCoupon.code})</span>
+                              <span className="tabular-nums">-{formatINR(appliedCoupon.discountAmount)}</span>
+                           </div>
+                        )}
+                     </div>
+
+                     {/* Coupon Input */}
+                     <div className="mt-6 pt-6 border-t border-[var(--border-subtle)]">
+                        {!appliedCoupon ? (
+                           <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                 <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                                 <Input 
+                                    placeholder="Coupon Code" 
+                                    className="pl-9 bg-[var(--bg-card)] border-[var(--border-strong)]"
+                                    value={couponCode}
+                                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                                 />
+                              </div>
+                              <Button 
+                                 type="button" 
+                                 variant="outline" 
+                                 onClick={handleApplyCoupon}
+                                 disabled={isValidatingCoupon || !couponCode}
+                                 className="border-[var(--saffron-500)] text-[var(--saffron-400)] hover:bg-[var(--saffron-500)]/10"
+                              >
+                                 {isValidatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                              </Button>
+                           </div>
+                        ) : (
+                           <div className="flex items-center justify-between p-3 bg-[var(--leaf-500)]/10 border border-[var(--leaf-500)]/30 rounded-xl">
+                              <div className="flex items-center gap-2">
+                                 <Tag className="w-4 h-4 text-[var(--leaf-500)]" />
+                                 <div>
+                                    <p className="text-sm font-bold text-[var(--leaf-500)]">{appliedCoupon.code}</p>
+                                    <p className="text-xs text-[var(--leaf-600)]">Coupon Applied</p>
+                                 </div>
+                              </div>
+                              <button 
+                                 type="button"
+                                 onClick={handleRemoveCoupon}
+                                 className="p-1 hover:bg-red-500/10 rounded-full transition-colors text-red-500"
+                              >
+                                 <X className="w-4 h-4" />
+                              </button>
+                           </div>
+                        )}
                      </div>
 
                      <div className="border-t border-[var(--border-subtle)] mt-4 pt-4 flex justify-between items-center text-lg font-bold">

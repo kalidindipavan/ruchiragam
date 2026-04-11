@@ -233,10 +233,27 @@ export default function ManageOrders() {
                       )}
                     </div>
                     
-                    <div className="flex justify-between items-center pt-5 border-t border-[var(--border-strong)] mt-4 bg-[var(--bg-card)] p-4 rounded-xl">
-                      <div className="text-[var(--text-secondary)] font-bold text-lg uppercase tracking-wider">Total Amount Paid</div>
-                      <div className="text-3xl font-black text-[var(--saffron-500)] tabular-nums drop-shadow-sm">
-                        ₹{viewingOrder.total}
+                    <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] space-y-2 text-sm">
+                      <div className="flex justify-between text-[var(--text-secondary)]">
+                        <span>Subtotal</span>
+                        <span className="tabular-nums font-medium text-[var(--text-primary)]">₹{viewingOrder.subtotal}</span>
+                      </div>
+                      <div className="flex justify-between text-[var(--text-secondary)]">
+                        <span>Delivery Fee</span>
+                        <span className="tabular-nums font-medium text-[var(--text-primary)]">₹{viewingOrder.delivery_fee}</span>
+                      </div>
+                      {viewingOrder.discount_amount > 0 && (
+                        <div className="flex justify-between text-green-500 font-medium">
+                          <span>Discount ({viewingOrder.coupon_code})</span>
+                          <span className="tabular-nums">-₹{viewingOrder.discount_amount}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center pt-5 border-t border-[var(--border-strong)] mt-4 bg-[var(--bg-card)] p-4 rounded-xl">
+                        <div className="text-[var(--text-secondary)] font-bold text-lg uppercase tracking-wider">Total Amount Paid</div>
+                        <div className="text-3xl font-black text-[var(--saffron-500)] tabular-nums drop-shadow-sm">
+                          ₹{viewingOrder.total}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -8,12 +8,13 @@ const { AppError } = require('../middleware/errorHandler');
 const { ORDER_STATUS } = require('../config/constants');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
+const couponService = require('./couponService');
 
 /**
  * Create a new order from user's cart.
  * Validates stock, calculates total, clears cart.
  */
-const createOrder = async (userId, { delivery_address, payment_provider, special_instructions }) => {
+const createOrder = async (userId, { delivery_address, payment_provider, special_instructions, coupon_code }) => {
   // Fetch user's cart with product details
   const { data: cartItems, error: cartError } = await supabase
     .from('cart_items')
@@ -42,8 +43,18 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
   }, 0);
 
   const deliveryFee = subtotal > 500 ? 0 : 50; // Free delivery above ₹500
-  const tax = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
-  const total = subtotal + deliveryFee + tax;
+  
+  // Handle Coupon
+  let discountAmount = 0;
+  if (coupon_code) {
+    const couponResult = await couponService.validateCoupon(coupon_code, subtotal);
+    if (couponResult) {
+      discountAmount = couponResult.discountAmount;
+    }
+  }
+
+  // Final Total (Tax removed as per request)
+  const total = subtotal + deliveryFee - discountAmount;
 
   // Create order
   const orderId = uuidv4();
@@ -55,7 +66,9 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
       status: ORDER_STATUS.PENDING,
       subtotal,
       delivery_fee: deliveryFee,
-      tax,
+      tax: 0, // Tax removed
+      discount_amount: discountAmount,
+      coupon_code: coupon_code || null,
       total,
       payment_provider,
       delivery_address,
