@@ -57,7 +57,7 @@ const allowedOrigins = [
   env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:3000',
-  /\.railway\.app$/, // Allow any Railway subdomain
+  ///\.railway\.app$/, // Allow any Railway subdomain
   /\.vercel\.app$/, // Allow any Vercel subdomain
 ];
 
