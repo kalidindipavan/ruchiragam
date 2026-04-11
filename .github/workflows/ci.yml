@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Backend Tests ──────────────────────────────────────────────────────────
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create test .env
+        run: |
+          cat > .env << 'EOF'
+          NODE_ENV=test
+          PORT=5001
+          SUPABASE_URL=https://test.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY=test_service_key
+          SUPABASE_ANON_KEY=test_anon_key
+          JWT_ACCESS_SECRET=test_access_secret_minimum_32_characters_long
+          JWT_REFRESH_SECRET=test_refresh_secret_minimum_32_characters_long
+          JWT_ACCESS_EXPIRES_IN=15m
+          JWT_REFRESH_EXPIRES_IN=7d
+          GOOGLE_CLIENT_ID=test_google_client_id
+          GOOGLE_CLIENT_SECRET=test_google_client_secret
+          GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
+          STRIPE_SECRET_KEY=sk_test_fake_key
+          STRIPE_PUBLISHABLE_KEY=pk_test_fake_key
+          STRIPE_WEBHOOK_SECRET=whsec_fake_secret
+          RAZORPAY_KEY_ID=rzp_test_fake_id
+          RAZORPAY_KEY_SECRET=fake_secret
+          RAZORPAY_WEBHOOK_SECRET=fake_webhook_secret
+          OPENAI_API_KEY=sk-test-fake-key
+          OPENAI_MODEL=gpt-4o
+          CLIENT_URL=http://localhost:5173
+          API_BASE_URL=http://localhost:5001
+          COOKIE_SECRET=test_cookie_secret_minimum_32_chars_long
+          EOF
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+
+  # ─── Frontend Build ─────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check || true
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: https://ruchiragam-api.onrender.com
+          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+
+  # ─── Security Audit ─────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit backend
+        working-directory: backend
+        run: npm audit --audit-level=high || true
+
+      - name: Audit frontend
+        working-directory: frontend
+        run: npm audit --audit-level=high || true
