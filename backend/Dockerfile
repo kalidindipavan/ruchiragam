@@ -19,7 +19,7 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY src ./src
-COPY .env.example ./.env.example
+# COPY .env.example ./.env.example
 
 # Create logs directory
 RUN mkdir -p logs && chown -R ruchimeal:nodejs logs

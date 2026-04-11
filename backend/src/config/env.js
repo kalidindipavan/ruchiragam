@@ -50,8 +50,13 @@ let env;
 try {
   env = envSchema.parse(process.env);
 } catch (err) {
-  console.error('❌ Invalid environment variables:', err.flatten().fieldErrors);
-  process.exit(1);
+  if (process.env.NODE_ENV === 'test') {
+    console.warn('⚠️  Some environment variables are missing or invalid in TEST mode. Tests may fail if they rely on these vars.');
+    env = envSchema.partial().parse(process.env); // Fallback to partial if in test
+  } else {
+    console.error('❌ Invalid environment variables:', err.flatten().fieldErrors);
+    process.exit(1);
+  }
 }
 
 module.exports = env;
