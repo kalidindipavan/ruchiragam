@@ -39,6 +39,13 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Skip refresh logic for the refresh endpoint itself to avoid infinite loops
+    if (error.response?.status === 401 && originalRequest.url?.includes('/auth/refresh')) {
+      localStorage.removeItem('accessToken');
+      window.location.href = '/auth/login';
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
