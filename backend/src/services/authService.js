@@ -15,6 +15,8 @@ const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = requir
 const { AppError } = require('../middleware/errorHandler');
 const { MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES, ROLES } = require('../config/constants');
 const logger = require('../utils/logger');
+const { generateSecureToken } = require('../utils/crypto');
+const emailService = require('./emailService');
 
 const SALT_ROUNDS = 12;
 
@@ -269,4 +271,87 @@ const _sanitizeUser = (user) => ({
   phone: user.phone,
 });
 
-module.exports = { register, login, refreshTokens, logout, googleOAuthLogin };
+/**
+ * Create a password reset token and send email.
+ */
+const requestPasswordReset = async (email) => {
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, email, full_name')
+    .eq('email', email.toLowerCase())
+    .single();
+
+  // For security, always return success even if email doesn't exist
+  if (!user) {
+    logger.info(`Password reset requested for non-existent email: ${email}`);
+    return;
+  }
+
+  const token = generateSecureToken(32);
+  const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour
+
+  const { error } = await supabase.from('password_reset_tokens').insert({
+    id: uuidv4(),
+    user_id: user.id,
+    token,
+    expires_at: expiresAt,
+  });
+
+  if (error) {
+    logger.error('Failed to store reset token:', error);
+    throw new AppError('Failed to initiate password reset', 500);
+  }
+
+  await emailService.sendPasswordResetEmail(user.email, token);
+};
+
+/**
+ * Reset password using a valid token.
+ */
+const resetPassword = async (token, newPassword) => {
+  const { data: resetToken, error } = await supabase
+    .from('password_reset_tokens')
+    .select('*, users(id, email)')
+    .eq('token', token)
+    .single();
+
+  if (error || !resetToken) {
+    throw new AppError('Invalid or expired reset token', 400);
+  }
+
+  if (new Date(resetToken.expires_at) < new Date()) {
+    await supabase.from('password_reset_tokens').delete().eq('id', resetToken.id);
+    throw new AppError('Reset token has expired', 400);
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // Update password and delete all reset tokens for this user
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ 
+      password_hash: hashedPassword, 
+      updated_at: new Date().toISOString() 
+    })
+    .eq('id', resetToken.user_id);
+
+  if (updateError) {
+    logger.error('Failed to update password:', updateError);
+    throw new AppError('Failed to reset password', 500);
+  }
+
+  // Delete all reset tokens for this user
+  await supabase.from('password_reset_tokens').delete().eq('user_id', resetToken.user_id);
+
+  logger.info(`Password successfully reset for user: ${resetToken.users.email}`);
+};
+
+module.exports = { 
+  register, 
+  login, 
+  refreshTokens, 
+  logout, 
+  googleOAuthLogin, 
+  requestPasswordReset, 
+  resetPassword 
+};

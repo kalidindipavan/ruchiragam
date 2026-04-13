@@ -67,6 +67,22 @@ const schemas = {
       password: z.string().min(1),
     }),
   },
+  forgotPassword: {
+    body: z.object({
+      email: z.string().email(),
+    }),
+  },
+  resetPassword: {
+    body: z.object({
+      token: z.string().min(1, 'Token is required'),
+      password: z
+        .string()
+        .min(8)
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, {
+          message: 'Password must have uppercase, lowercase, number, and special character',
+        }),
+    }),
+  },
 
   // Products
   createProduct: {

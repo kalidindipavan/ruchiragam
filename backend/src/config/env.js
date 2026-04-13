@@ -35,6 +35,8 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().min(1),
   RAZORPAY_KEY_SECRET: z.string().min(1),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
+  RAZORPAY_WEBHOOK_URL: z.string().url().optional(),
+  RAZORPAY_WEBSITE_URL: z.string().url().optional(),
 
   // OpenAI
   OPENAI_API_KEY: z.string().min(1),
@@ -44,6 +46,8 @@ const envSchema = z.object({
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
   API_BASE_URL: z.string().url().default('http://localhost:5000'),
   COOKIE_SECRET: z.string().min(32),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 let env;
