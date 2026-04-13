@@ -145,6 +145,15 @@ export default function Checkout() {
             email: prefill.email,
             contact: prefill.contact,
           },
+          readonly: {
+            contact: true,
+            email: true,
+          },
+          timeout: 600, // 10 minutes session timeout
+          retry: {
+            enabled: true,
+            max_count: 3,
+          },
           theme: {
             color: '#f5890a',
           },
