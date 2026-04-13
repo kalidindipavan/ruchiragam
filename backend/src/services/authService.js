@@ -287,13 +287,15 @@ const requestPasswordReset = async (email) => {
     return;
   }
 
-  const token = generateSecureToken(32);
+  // Generate 6-digit numeric OTP
+  const crypto = require('crypto');
+  const otp = crypto.randomInt(100000, 999999).toString();
   const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour
 
   const { error } = await supabase.from('password_reset_tokens').insert({
     id: uuidv4(),
     user_id: user.id,
-    token,
+    token: otp,
     expires_at: expiresAt,
   });
 
@@ -302,26 +304,39 @@ const requestPasswordReset = async (email) => {
     throw new AppError('Failed to initiate password reset', 500);
   }
 
-  await emailService.sendPasswordResetEmail(user.email, token);
+  await emailService.sendPasswordResetEmail(user.email, otp);
 };
 
 /**
- * Reset password using a valid token.
+ * Reset password using a valid OTP.
  */
-const resetPassword = async (token, newPassword) => {
+const resetPassword = async (email, otp, newPassword) => {
+  // First, find user by email
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('id, email')
+    .eq('email', email.toLowerCase())
+    .single();
+
+  if (userError || !user) {
+    throw new AppError('Invalid email or OTP', 400);
+  }
+
+  // Find unexpired OTP for this user
   const { data: resetToken, error } = await supabase
     .from('password_reset_tokens')
-    .select('*, users(id, email)')
-    .eq('token', token)
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('token', otp)
     .single();
 
   if (error || !resetToken) {
-    throw new AppError('Invalid or expired reset token', 400);
+    throw new AppError('Invalid or expired OTP', 400);
   }
 
   if (new Date(resetToken.expires_at) < new Date()) {
     await supabase.from('password_reset_tokens').delete().eq('id', resetToken.id);
-    throw new AppError('Reset token has expired', 400);
+    throw new AppError('OTP has expired', 400);
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
@@ -343,7 +358,7 @@ const resetPassword = async (token, newPassword) => {
   // Delete all reset tokens for this user
   await supabase.from('password_reset_tokens').delete().eq('user_id', resetToken.user_id);
 
-  logger.info(`Password successfully reset for user: ${resetToken.users.email}`);
+  logger.info(`Password successfully reset for user: ${user.email}`);
 };
 
 module.exports = { 

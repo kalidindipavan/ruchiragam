@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card';
 
 const resetPasswordSchema = z.object({
+  otp: z.string().length(6, 'OTP must be exactly 6 digits'),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -28,7 +29,7 @@ type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const email = searchParams.get('email');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -39,19 +40,20 @@ export default function ResetPassword() {
   });
 
   useEffect(() => {
-    if (!token) {
-      toast.error('Invalid or missing reset token');
+    if (!email) {
+      toast.error('Invalid or missing email parameter');
       navigate('/auth/login');
     }
-  }, [token, navigate]);
+  }, [email, navigate]);
 
   const onSubmit = async (data: ResetPasswordValues) => {
-    if (!token) return;
+    if (!email) return;
     
     setIsLoading(true);
     try {
       await apiClient.post('/auth/reset-password', {
-        token,
+        email,
+        otp: data.otp,
         password: data.password,
       });
       setIsSuccess(true);
@@ -100,6 +102,18 @@ export default function ResetPassword() {
         </CardHeader>
         <CardContent className="pt-8 space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[var(--text-secondary)]">Verification Code</label>
+              <Input 
+                type="text" 
+                placeholder="123456" 
+                maxLength={6}
+                {...register('otp')}
+                className={`text-center tracking-widest font-mono text-lg ${errors.otp ? 'border-red-500' : ''}`}
+              />
+              {errors.otp && <p className="text-xs text-red-500 text-center">{errors.otp.message}</p>}
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-[var(--text-secondary)]">New Password</label>
               <div className="relative">

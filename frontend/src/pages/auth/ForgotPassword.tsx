@@ -29,38 +29,14 @@ export default function ForgotPassword() {
     setIsLoading(true);
     try {
       await apiClient.post('/auth/forgot-password', data);
-      setIsSubmitted(true);
-      toast.success('Reset link sent! Please check your email.');
+      toast.success('Reset code sent! Please check your email.');
+      navigate(`/auth/reset?email=${encodeURIComponent(data.email)}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to request password reset');
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-hero">
-        <Card className="w-full max-w-md bg-[var(--bg-elevated)] border-[var(--border-subtle)] shadow-saffron-lg text-center">
-          <CardContent className="pt-10 pb-10 space-y-6">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-green-500">
-              <CheckCircle2 className="h-10 w-10" />
-            </div>
-            <div className="space-y-2">
-              <CardTitle className="text-2xl font-display">Check your email</CardTitle>
-              <CardDescription>
-                We've sent a password reset link to your email address. 
-                Please follow the instructions in the email to reset your password.
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => navigate('/auth/login')} className="w-full">
-              Back to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-hero">

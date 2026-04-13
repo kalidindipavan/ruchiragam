@@ -42,21 +42,19 @@ if (process.env.RESEND_API_KEY) {
  * @param {string} email - Targeted email
  * @param {string} resetToken - The raw token
  */
-const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = `${env.CLIENT_URL}/auth/reset?token=${resetToken}`;
-  
+const sendPasswordResetEmail = async (email, otpCode) => {
   const mailOptions = {
     from: process.env.EMAIL_FROM || '"Ruchi Ragam" <noreply@ruchiragam.com>',
     to: email,
     subject: 'Reset Your Password - Ruchi Ragam',
     html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
         <h2 style="color: #f5890a;">Password Reset Request</h2>
-        <p>You requested a password reset for your Ruchi Ragam account. Click the button below to set a new password:</p>
-        <div style="margin: 30px 0;">
-          <a href="${resetUrl}" style="background-color: #f5890a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        <p>You requested a password reset for your Ruchi Ragam account. Enter the following 6-digit code to set a new password:</p>
+        <div style="margin: 30px auto; max-width: max-content; background-color: #f0f0f0; padding: 20px 40px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1814;">
+          ${otpCode}
         </div>
-        <p>If you didn't request this, you can safely ignore this email. This link will expire in 1 hour.</p>
+        <p>If you didn't request this, you can safely ignore this email. This code will expire in 1 hour.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="font-size: 12px; color: #888;">&copy; 2026 Ruchi Ragam. Authentic Indian Flavors.</p>
       </div>

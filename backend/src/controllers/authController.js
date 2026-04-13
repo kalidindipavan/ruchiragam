@@ -109,8 +109,8 @@ const forgotPassword = async (req, res) => {
  * POST /api/auth/reset-password
  */
 const resetPassword = async (req, res) => {
-  const { token, password } = req.body;
-  await authService.resetPassword(token, password);
+  const { email, otp, password } = req.body;
+  await authService.resetPassword(email, otp, password);
   return sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
 };
 
