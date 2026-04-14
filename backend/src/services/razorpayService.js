@@ -24,12 +24,26 @@ const razorpay = new Razorpay({
  */
 const createOrder = async (order, user) => {
   try {
-    const amountInPaise = Math.round(order.total * 100); // Razorpay uses paise
+    if (!order || !order.total) {
+      throw new Error('Order total is missing or zero');
+    }
+
+    const total = Number(order.total);
+    if (isNaN(total) || total <= 0) {
+      throw new Error(`Invalid order total: ${order.total}`);
+    }
+
+    const amountInPaise = Math.round(total * 100);
+
+    // Razorpay minimum amount is 100 paise (1 INR)
+    if (amountInPaise < 100) {
+      throw new Error(`Order amount ${total} is below the minimum required by Razorpay (1.00 INR)`);
+    }
 
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
-      receipt: order.id.substring(0, 40), // Receipt max 40 chars
+      receipt: order.id.toString().substring(0, 40), // Receipt max 40 chars
       notes: {
         order_id: order.id,
         user_id: user.id,
@@ -44,16 +58,23 @@ const createOrder = async (order, user) => {
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       keyId: env.RAZORPAY_KEY_ID,
-      // Pre-fill form data for Razorpay checkout widget
       prefill: {
-        name: user.full_name,
+        name: user.full_name || 'Guest',
         email: user.email,
         contact: user.phone || '',
       },
     };
   } catch (err) {
-    logger.error('Razorpay createOrder error:', err);
-    throw new AppError(`Payment initialization failed: ${err.message}`, 400);
+    logger.error('Razorpay createOrder error details:', {
+      message: err.message,
+      code: err.code,
+      description: err.description,
+      metadata: err.metadata,
+      orderId: order?.id
+    });
+    
+    const errorMsg = err.description || err.message || 'Unknown Razorpay error';
+    throw new AppError(`Payment initialization failed: ${errorMsg}`, 400);
   }
 };
 

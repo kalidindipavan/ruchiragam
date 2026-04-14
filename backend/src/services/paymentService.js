@@ -22,7 +22,12 @@ const logger = require('../utils/logger');
  * @param {object} user - Authenticated user
  */
 const initiatePayment = async (orderId, provider, user) => {
+  logger.info(`Initiating ${provider} payment for order ${orderId} by user ${user.id}`);
   const order = await orderService.getOrderById(orderId, user.id, user.role);
+
+  if (!order) {
+    throw new AppError('Order not found', 404);
+  }
 
   if (order.payment_status === 'completed') {
     throw new AppError('Order already paid', 409);

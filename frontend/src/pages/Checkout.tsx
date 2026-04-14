@@ -98,8 +98,12 @@ export default function Checkout() {
         coupon_code: appliedCoupon?.code,
       });
 
-      const orderId = orderResponse.data.id;
-      const orderTotal = Number(orderResponse.data.total || 0);
+      const orderId = orderResponse.data?.id;
+      const orderTotal = Number(orderResponse.data?.total || 0);
+
+      if (!orderId) {
+        throw new Error('Order was created but ID is missing');
+      }
 
       // Free/fully-discounted order: no gateway payment required
       if (orderTotal <= 0) {
@@ -177,7 +181,10 @@ export default function Checkout() {
         setIsProcessing(false);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to process checkout');
+      console.error('Checkout error:', error);
+      const serverMessage = error.response?.data?.message;
+      const clientMessage = error.message || 'Failed to process checkout';
+      toast.error(serverMessage || clientMessage);
       setIsProcessing(false);
     }
   };
