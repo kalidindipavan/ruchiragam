@@ -28,6 +28,10 @@ const initiatePayment = async (orderId, provider, user) => {
     throw new AppError('Order already paid', 409);
   }
 
+  if (Number(order.total) <= 0) {
+    throw new AppError('Order total is zero. No online payment is required for this order.', 400);
+  }
+
   // Check for existing pending payment (idempotency)
   const { data: existing } = await supabase
     .from('payments')

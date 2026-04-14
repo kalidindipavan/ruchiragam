@@ -99,6 +99,16 @@ export default function Checkout() {
       });
 
       const orderId = orderResponse.data.id;
+      const orderTotal = Number(orderResponse.data.total || 0);
+
+      // Free/fully-discounted order: no gateway payment required
+      if (orderTotal <= 0) {
+        toast.success('Order placed successfully!');
+        await fetchCart();
+        navigate(`/orders/${orderId}`);
+        setIsProcessing(false);
+        return;
+      }
 
       // 2. Initiate Payment
       if (paymentProvider === 'stripe') {

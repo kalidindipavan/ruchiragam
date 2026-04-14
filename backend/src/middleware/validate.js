@@ -117,6 +117,7 @@ const schemas = {
       }),
       payment_provider: z.enum(['stripe', 'razorpay']),
       special_instructions: z.string().max(500).optional(),
+      coupon_code: z.string().trim().min(1).max(50).optional(),
     }),
   },
 
