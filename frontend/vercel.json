@@ -1,4 +1,15 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "accelerometer=(self \"https://checkout.razorpay.com\"), gyroscope=(self \"https://checkout.razorpay.com\"), magnetometer=(self \"https://checkout.razorpay.com\")"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
