@@ -11,31 +11,75 @@ const logger = require('../utils/logger');
 // Configure transporter
 // If RESEND_API_KEY is available, we use Resend's SMTP
 // Otherwise, we look for generic SMTP settings or fallback to console log in dev
-let transporter;
+const getTransporter = () => {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const gmailUser = process.env.GMAIL_EMAIL || process.env.EMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
 
-if (process.env.RESEND_API_KEY) {
-  transporter = nodemailer.createTransport({
-    host: 'smtp.resend.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: 'resend',
-      pass: process.env.RESEND_API_KEY,
-    },
-  });
-} else if (env.NODE_ENV === 'development') {
-  // Mock transporter for development
-  transporter = {
-    sendMail: async (options) => {
-      logger.info('--- MOCK EMAIL SENT ---');
-      logger.info(`To: ${options.to}`);
-      logger.info(`Subject: ${options.subject}`);
-      logger.info(`Body: ${options.html}`);
-      logger.info('-----------------------');
-      return { messageId: 'mock-id' };
-    },
-  };
-}
+  // Gmail SMTP (recommended)
+  if (gmailUser && gmailPass) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
+      },
+    });
+  }
+
+  // Resend fallback
+  if (process.env.RESEND_API_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY,
+      },
+    });
+  }
+
+  // Generic SMTP fallback
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      secure: process.env.SMTP_SECURE === 'true',
+    });
+  }
+
+  if (nodeEnv === 'development') {
+    // Mock only when no email credentials are configured
+    return {
+      sendMail: async (options) => {
+        logger.info('--- MOCK EMAIL SENT ---');
+        logger.info(`To: ${options.to}`);
+        logger.info(`Subject: ${options.subject}`);
+        logger.info(`Body preview: ${options.html ? options.html.substring(0, 300) + '...' : options.text ? options.text.substring(0, 300) + '...' : 'No body'}`);
+        logger.info('-----------------------');
+        return { messageId: 'mock-' + Date.now() };
+      },
+    };
+  }
+
+  throw new Error('Email config missing. See backend/.env.example for Gmail/Resend/SMTP setup');
+};
+
+
+// Update send functions to use getTransporter()
+let cachedTransporter = null;
+
+const getCachedTransporter = () => {
+  if (!cachedTransporter) {
+    cachedTransporter = getTransporter();
+  }
+  return cachedTransporter;
+};
 
 /**
  * Send a password reset email.
@@ -62,11 +106,11 @@ const sendPasswordResetEmail = async (email, otpCode) => {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await getCachedTransporter().sendMail(mailOptions);
     logger.info(`Password reset email sent to ${email}: ${info.messageId}`);
   } catch (err) {
     logger.error(`Failed to send password reset email to ${email}:`, err);
-    // We don't throw here to avoid leaking info to the client about email success, 
+    // We don't throw here to avoid leaking info to the client about email success,
     // but in a real app you might want to handle this more robustly.
   }
 };
@@ -77,94 +121,103 @@ const sendPasswordResetEmail = async (email, otpCode) => {
  * @param {object} user - User object with email, full_name
  */
 const sendOrderConfirmationEmail = async (order, user) => {
+  const orderCode = (order.id || '').slice(-8).toUpperCase();
+  const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
+  const items = Array.isArray(order.items) ? order.items : [];
+  const formatINR = (value) => `&#8377;${Number(value || 0).toLocaleString('en-IN')}`;
+  const customerName = user.full_name || 'Customer';
+  const paymentProvider = (order.payment_provider || 'online').toUpperCase();
+  const paymentMessage = order.payment_status === 'completed' ? 'Payment received successfully.' : 'Payment is pending confirmation.';
+
   const mailOptions = {
     from: process.env.EMAIL_FROM || '"Ruchi Ragam" <noreply@ruchiragam.com>',
     to: user.email,
-    subject: `Order #${order.id.slice(-8).toUpperCase()} Confirmed - Thank You!`,
+    subject: `Order #${orderCode} Confirmed - Thank You!`,
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-    .header { background: linear-gradient(135deg, #f5890a 0%, #ff8c00 100%); color: white; padding: 2rem; text-align: center; }
-    .order-details { background: #f8f9fa; padding: 2rem; border-radius: 12px; margin: 2rem 0; }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f8f9fa; font-weight: 600; }
-    .total { font-size: 1.2em; font-weight: bold; color: #f5890a; }
-    .address { background: white; padding: 1.5rem; border-left: 4px solid #f5890a; margin: 1rem 0; }
-    .footer { text-align: center; padding: 2rem; color: #666; font-size: 0.9em; }
-    @media (max-width: 600px) { body { padding: 1rem; } table { font-size: 0.9em; } }
+    body { margin: 0; padding: 0; background: #fff8ef; font-family: Arial, sans-serif; color: #2b2b2b; }
+    .wrapper { width: 100%; padding: 24px 0; }
+    .card { max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #f1e6d8; border-radius: 14px; overflow: hidden; }
+    .header { background: linear-gradient(120deg, #e6721f, #f5a623); color: #ffffff; padding: 28px 24px; text-align: center; }
+    .brand { font-size: 22px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.3px; }
+    .sub { margin: 0; font-size: 15px; opacity: 0.95; }
+    .content { padding: 24px; }
+    .meta { background: #fff4e8; border: 1px solid #f3dfc9; border-radius: 10px; padding: 14px; margin-bottom: 18px; font-size: 14px; }
+    .meta-row { margin: 3px 0; }
+    .section-title { margin: 0 0 10px 0; font-size: 17px; color: #a14e11; }
+    table { width: 100%; border-collapse: collapse; margin: 0; }
+    th { text-align: left; font-size: 13px; color: #7a5a42; background: #fff8ef; padding: 10px 8px; border-bottom: 1px solid #f0e1d0; }
+    td { padding: 10px 8px; border-bottom: 1px solid #f7ecdf; vertical-align: top; font-size: 14px; }
+    .summary { margin-top: 14px; border-top: 2px solid #f3e3d0; padding-top: 12px; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin: 6px 0; }
+    .discount { color: #0f8a4b; }
+    .grand-total { font-size: 18px; color: #cf5f17; font-weight: 700; }
+    .box { background: #fffaf4; border: 1px solid #f3e5d4; border-radius: 10px; padding: 14px; margin-top: 16px; }
+    .footer { text-align: center; font-size: 12px; color: #8b7867; padding: 0 24px 24px 24px; }
+    .link { color: #c85f1d; text-decoration: none; }
+    @media (max-width: 620px) {
+      .wrapper { padding: 12px 8px; }
+      .content { padding: 16px; }
+      th, td { font-size: 13px; }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>🍛 Order Confirmed!</h1>
-    <p>Thank you for your order, ${user.full_name || 'Customer'}!</p>
-  </div>
-  
-  <div style="padding: 0 2rem;">
-    <h2>Order #${order.id.slice(-8).toUpperCase()} | ${new Date(order.created_at).toLocaleDateString('en-IN')}</h2>
-    
-    <div class="order-details">
-      <h3>Your Order Items</h3>
-      <table>
-        <thead>
-          <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
-        </thead>
-        <tbody>
-          ${order.items.map(item => `
-            <tr>
-              <td><strong>${item.product_name}</strong>${item.variant_name ? `<br><small>${item.variant_name}</small>` : ''}</td>
-              <td>${item.quantity}</td>
-              <td>₹${item.unit_price.toLocaleString()}</td>
-              <td class="total">₹${item.total_price.toLocaleString()}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      
-      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #f0f0f0;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <span>Subtotal:</span> <span>₹${order.subtotal.toLocaleString()}</span>
-        </div>
-        ${order.discount_amount > 0 ? `<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: green;">
-          <span>Discount ${order.coupon_code ? `(${order.coupon_code})` : ''}:</span> <span>-₹${order.discount_amount.toLocaleString()}</span>
-        </div>` : ''}
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <span>Delivery:</span> <span>₹${order.delivery_fee.toLocaleString()}</span>
-        </div>
-        <div class="total" style="display: flex; justify-content: space-between; font-size: 1.3em;">
-          <span>Total:</span> <strong>₹${order.total.toLocaleString()}</strong>
-        </div>
+  <div class="wrapper">
+    <div class="card">
+      <div class="header">
+        <p class="brand">Ruchi Ragam</p>
+        <p class="sub">Your order is confirmed, ${customerName}.</p>
       </div>
-    </div>
-    
-    ${order.special_instructions ? `
-    <div class="order-details">
-      <h3>Special Instructions</h3>
-      <p>${order.special_instructions}</p>
-    </div>
-    ` : ''}
-    
-    <div class="address">
-      <h3>📍 Delivery Address</h3>
-      <p>${order.delivery_address}</p>
-    </div>
-    
-    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;">
-      <h3>Next Steps</h3>
-      <p><strong>${order.payment_provider.toUpperCase()} Payment</strong><br>
-      ${order.payment_status === 'completed' ? '✅ Payment received successfully!' : 'Payment pending confirmation.'}</p>
-      <p>You will receive tracking updates via SMS/Email. Expected delivery: 3-5 business days.</p>
-    </div>
-    
-    <div class="footer">
-      <p>Need help? <a href="${env.CLIENT_URL || 'https://ruchiragam.com'}/support" style="color: #f5890a;">Contact Support</a> | 
-      <a href="${env.CLIENT_URL || 'https://ruchiragam.com'}/track" style="color: #f5890a;">Track Order</a></p>
-      <p>&copy; 2026 Ruchi Ragam. Authentic Pachadi & Podi since generations. 🇮🇳</p>
+      <div class="content">
+        <div class="meta">
+          <p class="meta-row"><strong>Order ID:</strong> #${orderCode}</p>
+          <p class="meta-row"><strong>Date:</strong> ${orderDate}</p>
+          <p class="meta-row"><strong>Payment:</strong> ${paymentProvider} - ${paymentMessage}</p>
+        </div>
+
+        <h3 class="section-title">Order Items</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item) => `
+              <tr>
+                <td><strong>${item.product_name || 'Item'}</strong>${item.variant_name ? `<br><span style="font-size:12px;color:#7f6a58;">${item.variant_name}</span>` : ''}</td>
+                <td>${item.quantity || 0}</td>
+                <td>${formatINR(item.unit_price)}</td>
+                <td><strong>${formatINR(item.total_price)}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="summary">
+          <div class="summary-row"><span>Subtotal</span><span>${formatINR(order.subtotal)}</span></div>
+          ${Number(order.discount_amount || 0) > 0 ? `<div class="summary-row discount"><span>Discount ${order.coupon_code ? `(${order.coupon_code})` : ''}</span><span>-${formatINR(order.discount_amount)}</span></div>` : ''}
+          <div class="summary-row"><span>Delivery</span><span>${formatINR(order.delivery_fee)}</span></div>
+          <div class="summary-row grand-total"><span>Total</span><span>${formatINR(order.total)}</span></div>
+        </div>
+
+        ${order.special_instructions ? `<div class="box"><strong>Special Instructions</strong><p style="margin:8px 0 0 0;">${order.special_instructions}</p></div>` : ''}
+        <div class="box"><strong>Delivery Address</strong><p style="margin:8px 0 0 0;">${order.delivery_address || 'Address not available'}</p></div>
+        <div class="box"><strong>Need help?</strong> Visit <a class="link" href="${env.CLIENT_URL || 'https://ruchiragam.com'}/support">Support</a> or <a class="link" href="${env.CLIENT_URL || 'https://ruchiragam.com'}/track">Track Order</a>.</div>
+      </div>
+
+      <div class="footer">
+        <p style="margin:0;">&copy; 2026 Ruchi Ragam. Authentic Indian flavors.</p>
+      </div>
     </div>
   </div>
 </body>
@@ -173,7 +226,7 @@ const sendOrderConfirmationEmail = async (order, user) => {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await getCachedTransporter().sendMail(mailOptions);
     logger.info(`Order confirmation sent to ${user.email} for order ${order.id}: ${info.messageId}`);
   } catch (err) {
     logger.error(`Failed to send order confirmation to ${user.email}:`, err);

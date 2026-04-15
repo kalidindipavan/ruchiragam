@@ -12,6 +12,46 @@ const couponService = require('./couponService');
 const emailService = require('./emailService');
 
 /**
+ * Send order confirmation email for a specific order.
+ * Fire-and-forget (logs on failure, does not throw).
+ */
+const sendOrderConfirmation = async (orderId, fallbackUserId = null) => {
+  try {
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !orderData) return;
+
+    let user = null;
+
+    if (fallbackUserId) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', fallbackUserId)
+        .single();
+      user = userData;
+    } else {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', orderData.user_id)
+        .single();
+      user = userData;
+    }
+
+    if (user?.email) {
+      await emailService.sendOrderConfirmationEmail(orderData, user);
+    }
+  } catch (emailErr) {
+    logger.error(`Failed to send confirmation email for order ${orderId}:`, emailErr);
+  }
+};
+
+/**
  * Create a new order from user's cart.
  * Validates stock, calculates total, clears cart.
  */
@@ -123,19 +163,7 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
 
   // Send confirmation email for immediate confirmations (COD/zero total)
   if (initialOrderStatus === ORDER_STATUS.CONFIRMED) {
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('email, full_name')
-        .eq('id', userId)
-        .single();
-      
-      if (userData) {
-        await emailService.sendOrderConfirmationEmail({ ...order, items: orderItems }, userData);
-      }
-    } catch (emailErr) {
-      logger.error(`Failed to send COD confirmation email for order ${orderId}:`, emailErr);
-    }
+    await sendOrderConfirmation(orderId, userId);
   }
 
   return { ...order, items: orderItems };
@@ -202,6 +230,14 @@ const updateOrderStatus = async (orderId, status) => {
     throw new AppError('Invalid order status', 400);
   }
 
+  const { data: existingOrder, error: existingError } = await supabase
+    .from('orders')
+    .select('id, user_id, status')
+    .eq('id', orderId)
+    .single();
+
+  if (existingError || !existingOrder) throw new AppError('Order not found', 404);
+
   const { data, error } = await supabase
     .from('orders')
     .update({ status, updated_at: new Date().toISOString() })
@@ -210,6 +246,12 @@ const updateOrderStatus = async (orderId, status) => {
     .single();
 
   if (error || !data) throw new AppError('Order not found', 404);
+
+  const justConfirmed = existingOrder.status !== ORDER_STATUS.CONFIRMED && status === ORDER_STATUS.CONFIRMED;
+  if (justConfirmed) {
+    await sendOrderConfirmation(orderId, existingOrder.user_id);
+  }
+
   return data;
 };
 
@@ -232,13 +274,7 @@ const markOrderPaid = async (orderId, paymentId) => {
   if (error) throw new AppError('Failed to update order payment status', 500);
 
   // Send confirmation email on payment success
-  try {
-    if (data.users && data.users.email) {
-      await emailService.sendOrderConfirmationEmail(data, data.users);
-    }
-  } catch (emailErr) {
-    logger.error(`Failed to send payment confirmation email for order ${data.id}:`, emailErr);
-  }
+  await sendOrderConfirmation(data.id, data.users?.id);
 
   return data;
 };
@@ -272,4 +308,3 @@ const getAllOrders = async ({ page = 1, limit = 20, status }) => {
 };
 
 module.exports = { createOrder, getUserOrders, getOrderById, updateOrderStatus, markOrderPaid, getAllOrders };
-
