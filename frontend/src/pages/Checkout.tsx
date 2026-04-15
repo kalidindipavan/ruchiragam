@@ -28,7 +28,8 @@ const addressSchema = z.object({
   street: z.string().min(5, 'Street address is required'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
-  postal_code: z.string().min(4, 'Postal code is required'),
+postal_code: z.string().min(4, 'Postal code is required'),
+  phone_number: z.string().min(10, 'Phone number required').regex(/^[6-9]\\d{9}$/, 'Enter valid 10-digit phone'),
   special_instructions: z.string().optional(),
 });
 
@@ -91,7 +92,8 @@ export default function Checkout() {
           city: data.city,
           state: data.state,
           postal_code: data.postal_code,
-          country: 'India',
+          phone_number: data.phone_number,
+        country: 'India',
         },
         payment_provider: paymentProvider,
         special_instructions: data.special_instructions,
@@ -256,7 +258,13 @@ export default function Checkout() {
                         <div className="space-y-2">
                            <label className="text-sm font-medium text-[var(--text-secondary)]">Postal / PIN Code</label>
                            <Input placeholder="500001" {...register('postal_code')} />
-                           {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
+{errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                           <label className="text-sm font-medium text-[var(--text-secondary)]">Phone Number</label>
+                           <Input placeholder="9XXXXXXXXX" {...register('phone_number')} />
+                           {errors.phone_number && <p className="text-xs text-red-500">{errors.phone_number.message}</p>}
                         </div>
 
                         <div className="space-y-2 pt-4">
