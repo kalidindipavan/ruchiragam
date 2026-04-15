@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, LogOut, Menu, Utensils } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
@@ -43,6 +43,38 @@ export default function Navbar() {
     navigate('/');
   };
 
+  const desktopNavClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'rounded-full px-3 py-1 text-sm font-medium transition-colors visited:text-[var(--text-primary)]',
+      isActive
+        ? 'bg-[var(--saffron-500)]/15 text-[var(--saffron-400)]'
+        : 'text-[var(--text-primary)] hover:text-[var(--saffron-400)]'
+    );
+
+  const mobileNavClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'rounded-lg px-2 py-1 text-base font-medium transition-colors visited:text-[var(--text-primary)]',
+      isActive
+        ? 'bg-[var(--saffron-500)]/15 text-[var(--saffron-400)]'
+        : 'text-[var(--text-primary)] hover:text-[var(--saffron-400)]'
+    );
+
+  const userDesktopNavClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium transition-colors',
+      isActive
+        ? 'bg-[var(--saffron-500)]/15 text-[var(--saffron-400)]'
+        : 'text-[var(--text-secondary)] hover:text-[var(--saffron-400)]'
+    );
+
+  const userMobileNavClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'flex items-center gap-2 rounded-lg px-2 py-1 text-base font-medium transition-colors',
+      isActive
+        ? 'bg-[var(--saffron-500)]/15 text-[var(--saffron-400)]'
+        : 'text-[var(--text-primary)] hover:text-[var(--saffron-400)]'
+    );
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] navbar-glass">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -61,18 +93,18 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:gap-x-8">
-          <Link to="/" className="text-sm font-medium text-[var(--text-primary)] transition-colors hover:text-[var(--saffron-400)]">
+          <NavLink to="/" end className={desktopNavClass}>
             Home
-          </Link>
-          <Link to="/products" className="text-sm font-medium text-[var(--text-primary)] transition-colors hover:text-[var(--saffron-400)]">
+          </NavLink>
+          <NavLink to="/products" className={desktopNavClass}>
             Products
-          </Link>
-          <Link to="/about" className="text-sm font-medium text-[var(--text-primary)] transition-colors hover:text-[var(--saffron-400)]">
+          </NavLink>
+          <NavLink to="/about" className={desktopNavClass}>
             Our Story
-          </Link>
-          <Link to="/support" className="text-sm font-medium text-[var(--text-primary)] transition-colors hover:text-[var(--saffron-400)]">
+          </NavLink>
+          <NavLink to="/support" className={desktopNavClass}>
             Support
-          </Link>
+          </NavLink>
         </div>
 
         {/* Universal Actions Container */}
@@ -97,14 +129,14 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
-                <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--saffron-400)] transition-colors">
+                <NavLink to="/profile" className={userDesktopNavClass}>
                   <User className="h-4 w-4" />
                   <span>{user?.full_name?.split(' ')[0]}</span>
-                </Link>
+                </NavLink>
                 {user?.role === 'admin' && (
-                  <Link to="/admin">
-                    <Badge variant="outline" className="border-[var(--saffron-500)] text-[var(--saffron-400)] cursor-pointer hover:bg-[var(--saffron-500)] hover:text-white transition-colors">Admin</Badge>
-                  </Link>
+                  <NavLink to="/admin" className={userDesktopNavClass}>
+                    <Badge variant="outline" className="border-[var(--saffron-500)] text-[var(--saffron-400)]">Admin</Badge>
+                  </NavLink>
                 )}
                 <button
                   onClick={handleLogout}
@@ -157,22 +189,22 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-4 shadow-xl">
           <div className="flex flex-col space-y-4">
-            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-[var(--text-primary)]">Home</Link>
-            <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-[var(--text-primary)]">Products</Link>
-            <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-[var(--text-primary)]">Our Story</Link>
-            <Link to="/support" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-[var(--text-primary)]">Support</Link>
+            <NavLink to="/" end onClick={() => setIsMobileMenuOpen(false)} className={mobileNavClass}>Home</NavLink>
+            <NavLink to="/products" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavClass}>Products</NavLink>
+            <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavClass}>Our Story</NavLink>
+            <NavLink to="/support" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavClass}>Support</NavLink>
 
             <div className="h-px w-full bg-[var(--border-subtle)] my-2" />
 
             {isAuthenticated ? (
               <>
-                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-base font-medium text-[var(--text-primary)]">
+                <NavLink to="/profile" onClick={() => setIsMobileMenuOpen(false)} className={userMobileNavClass}>
                   <User className="h-5 w-5 text-[var(--saffron-400)]" /> Profile
-                </Link>
+                </NavLink>
                 {user?.role === 'admin' && (
-                  <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-base font-medium text-[var(--text-primary)]">
+                  <NavLink to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={userMobileNavClass}>
                     Admin Dashboard
-                  </Link>
+                  </NavLink>
                 )}
                 <button
                   onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}

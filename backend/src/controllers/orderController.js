@@ -35,6 +35,14 @@ const getOrderById = async (req, res) => {
 };
 
 /**
+ * PATCH /api/orders/:id/cancel — User: cancel own order.
+ */
+const cancelMyOrder = async (req, res) => {
+  const order = await orderService.cancelMyOrder(req.params.id, req.user.id);
+  return sendSuccess(res, order, 'Order cancelled successfully');
+};
+
+/**
  * GET /api/orders — Admin: Get all orders.
  */
 const getAllOrders = async (req, res) => {
@@ -56,4 +64,4 @@ const updateOrderStatus = async (req, res) => {
   return sendSuccess(res, order, 'Order status updated');
 };
 
-module.exports = { createOrder, getMyOrders, getOrderById, getAllOrders, updateOrderStatus };
+module.exports = { createOrder, getMyOrders, getOrderById, cancelMyOrder, getAllOrders, updateOrderStatus };

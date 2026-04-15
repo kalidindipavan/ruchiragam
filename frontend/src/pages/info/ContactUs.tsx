@@ -41,7 +41,7 @@ export default function ContactUs() {
                 <div>
                   <h3 className="font-bold text-white mb-1">Email Us</h3>
                   <p className="text-[var(--text-secondary)] mb-2 text-sm">Best for order issues and claims.</p>
-                  <a href="mailto:support@ruchiragam.com" className="text-[var(--saffron-400)] hover:underline font-medium">support@ruchiragam.com</a>
+                  <a href="mailto:ruchiragamsupport@gmail.com" className="text-[var(--saffron-400)] hover:underline font-medium">ruchiragamsupport@gmail.com</a>
                 </div>
               </div>
 

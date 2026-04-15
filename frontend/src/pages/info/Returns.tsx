@@ -56,7 +56,7 @@ export default function Returns() {
 
         <h2 className="text-2xl font-display font-bold mb-4 mt-8">How to start a claim?</h2>
         <p className="mb-4">
-          Send an email to <strong>support@ruchiragam.com</strong> and be sure to include:
+          Send an email to <strong>ruchiragamsupport@gmail.com</strong> and be sure to include:
         </p>
         <ul className="text-[var(--text-secondary)] space-y-2 mb-8 list-disc pl-5">
           <li>Your Full Name and Order Number (e.g. #ORDER-123)</li>

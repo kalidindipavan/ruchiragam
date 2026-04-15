@@ -180,7 +180,7 @@ const getUserOrders = async (userId, { page = 1, limit = 10 }) => {
     .from('orders')
     .select(`
       id, status, total, payment_provider, payment_status, created_at,
-      order_items ( id, product_name, product_image, quantity, unit_price, total_price )
+      order_items ( id, product_id, product_name, product_image, quantity, unit_price, total_price )
     `, { count: 'exact' })
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -220,6 +220,42 @@ const getOrderById = async (orderId, userId, userRole) => {
   }
 
   return data;
+};
+
+/**
+ * Cancel order (user-owned order only).
+ * Allowed only before preparation starts.
+ */
+const cancelMyOrder = async (orderId, userId) => {
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('id, user_id, status, payment_status')
+    .eq('id', orderId)
+    .single();
+
+  if (error || !order) throw new AppError('Order not found', 404);
+  if (order.user_id !== userId) throw new AppError('Not authorized to cancel this order', 403);
+
+  const cancellableStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED];
+  if (!cancellableStatuses.includes(order.status)) {
+    throw new AppError('Order can no longer be cancelled at this stage', 400);
+  }
+
+  // Online completed payments require refund handling flow by support/admin.
+  if (order.payment_status === 'completed') {
+    throw new AppError('Paid orders cannot be self-cancelled. Please contact support for refund.', 400);
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('orders')
+    .update({ status: ORDER_STATUS.CANCELLED, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .select('*')
+    .single();
+
+  if (updateError || !updated) throw new AppError('Failed to cancel order', 500);
+
+  return updated;
 };
 
 /**
@@ -307,4 +343,4 @@ const getAllOrders = async ({ page = 1, limit = 20, status }) => {
   };
 };
 
-module.exports = { createOrder, getUserOrders, getOrderById, updateOrderStatus, markOrderPaid, getAllOrders };
+module.exports = { createOrder, getUserOrders, getOrderById, cancelMyOrder, updateOrderStatus, markOrderPaid, getAllOrders };

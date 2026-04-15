@@ -85,6 +85,37 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
 
     setIsProcessing(true);
     try {
+      // Save delivery address to profile (best effort, non-blocking)
+      try {
+        const { data: addressResponse } = await apiClient.get('/user/addresses');
+        const existingAddresses = addressResponse?.data?.addresses || [];
+        const normalized = (value: string) => value.trim().toLowerCase();
+
+        const alreadyExists = existingAddresses.some((address: any) =>
+          normalized(address.street || '') === normalized(data.street) &&
+          normalized(address.city || '') === normalized(data.city) &&
+          normalized(address.state || '') === normalized(data.state) &&
+          String(address.postal_code || '').trim() === data.postal_code.trim() &&
+          String(address.phone_number || '').replace(/\D/g, '') === data.phone_number.replace(/\D/g, '')
+        );
+
+        if (!alreadyExists) {
+          await apiClient.post('/user/addresses', {
+            name: user?.full_name || 'Home',
+            street: data.street,
+            city: data.city,
+            state: data.state,
+            postal_code: data.postal_code,
+            phone_number: data.phone_number,
+            country: 'IN',
+            is_default: existingAddresses.length === 0,
+          });
+        }
+      } catch (addressSaveError) {
+        // Keep checkout resilient even if saving address fails.
+        console.warn('Address save skipped:', addressSaveError);
+      }
+
       // 1. Create Order
       const { data: orderResponse } = await apiClient.post('/orders', {
         delivery_address: {

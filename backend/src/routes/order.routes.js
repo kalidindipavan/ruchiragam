@@ -11,6 +11,7 @@ const { validate, schemas } = require('../middleware/validate');
 // User routes
 router.post('/', authenticate, validate(schemas.createOrder), orderController.createOrder);
 router.get('/me', authenticate, orderController.getMyOrders);
+router.patch('/:id/cancel', authenticate, orderController.cancelMyOrder);
 router.get('/:id', authenticate, orderController.getOrderById);
 
 // Admin routes
