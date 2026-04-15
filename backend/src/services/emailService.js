@@ -8,28 +8,47 @@ const nodemailer = require('nodemailer');
 const env = require('../config/env');
 const logger = require('../utils/logger');
 
+const hasRealValue = (value) => {
+  if (!value) return false;
+  const v = String(value).trim();
+  if (!v) return false;
+  const lower = v.toLowerCase();
+  return !(
+    lower.includes('your-') ||
+    lower.includes('example') ||
+    lower.includes('placeholder') ||
+    lower === 'changeme'
+  );
+};
+
 // Configure transporter
 // If RESEND_API_KEY is available, we use Resend's SMTP
 // Otherwise, we look for generic SMTP settings or fallback to console log in dev
-const getTransporter = () => {
+const getTransporters = () => {
   const nodeEnv = process.env.NODE_ENV || 'development';
-  const gmailUser = process.env.GMAIL_EMAIL || process.env.EMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
+  const gmailUser = (process.env.GMAIL_EMAIL || process.env.EMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS || '').trim();
+  const transporters = [];
 
   // Gmail SMTP (recommended)
-  if (gmailUser && gmailPass) {
-    return nodemailer.createTransport({
+  if (hasRealValue(gmailUser) && hasRealValue(gmailPass)) {
+    transporters.push({
+      name: 'gmail',
+      transporter: nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: gmailUser,
         pass: gmailPass,
       },
+      }),
     });
   }
 
   // Resend fallback
-  if (process.env.RESEND_API_KEY) {
-    return nodemailer.createTransport({
+  if (hasRealValue(process.env.RESEND_API_KEY)) {
+    transporters.push({
+      name: 'resend',
+      transporter: nodemailer.createTransport({
       host: 'smtp.resend.com',
       port: 465,
       secure: true,
@@ -37,12 +56,15 @@ const getTransporter = () => {
         user: 'resend',
         pass: process.env.RESEND_API_KEY,
       },
+      }),
     });
   }
 
   // Generic SMTP fallback
-  if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
+  if (hasRealValue(process.env.SMTP_HOST) && hasRealValue(process.env.SMTP_USER) && hasRealValue(process.env.SMTP_PASS)) {
+    transporters.push({
+      name: 'smtp',
+      transporter: nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       auth: {
@@ -50,13 +72,21 @@ const getTransporter = () => {
         pass: process.env.SMTP_PASS,
       },
       secure: process.env.SMTP_SECURE === 'true',
+      }),
     });
+  }
+
+  if (transporters.length > 0) {
+    logger.info(`Email providers configured: ${transporters.map((t) => t.name).join(', ')}`);
+    return transporters;
   }
 
   if (nodeEnv === 'development') {
     // Mock only when no email credentials are configured
-    return {
-      sendMail: async (options) => {
+    return [{
+      name: 'mock',
+      transporter: {
+        sendMail: async (options) => {
         logger.info('--- MOCK EMAIL SENT ---');
         logger.info(`To: ${options.to}`);
         logger.info(`Subject: ${options.subject}`);
@@ -64,7 +94,8 @@ const getTransporter = () => {
         logger.info('-----------------------');
         return { messageId: 'mock-' + Date.now() };
       },
-    };
+      },
+    }];
   }
 
   throw new Error('Email config missing. See backend/.env.example for Gmail/Resend/SMTP setup');
@@ -72,13 +103,30 @@ const getTransporter = () => {
 
 
 // Update send functions to use getTransporter()
-let cachedTransporter = null;
+let cachedTransporters = null;
 
-const getCachedTransporter = () => {
-  if (!cachedTransporter) {
-    cachedTransporter = getTransporter();
+const getCachedTransporters = () => {
+  if (!cachedTransporters) {
+    cachedTransporters = getTransporters();
   }
-  return cachedTransporter;
+  return cachedTransporters;
+};
+
+const sendWithFallback = async (mailOptions) => {
+  const providers = getCachedTransporters();
+  let lastError = null;
+
+  for (const provider of providers) {
+    try {
+      const info = await provider.transporter.sendMail(mailOptions);
+      return { provider: provider.name, info };
+    } catch (err) {
+      lastError = err;
+      logger.error(`Email send failed via ${provider.name}:`, err);
+    }
+  }
+
+  throw lastError || new Error('All configured email providers failed');
 };
 
 /**
@@ -106,8 +154,8 @@ const sendPasswordResetEmail = async (email, otpCode) => {
   };
 
   try {
-    const info = await getCachedTransporter().sendMail(mailOptions);
-    logger.info(`Password reset email sent to ${email}: ${info.messageId}`);
+    const { provider, info } = await sendWithFallback(mailOptions);
+    logger.info(`Password reset email sent to ${email} via ${provider}: ${info.messageId}`);
   } catch (err) {
     logger.error(`Failed to send password reset email to ${email}:`, err);
     // We don't throw here to avoid leaking info to the client about email success,
@@ -256,8 +304,8 @@ const sendOrderConfirmationEmail = async (order, user) => {
   };
 
   try {
-    const info = await getCachedTransporter().sendMail(mailOptions);
-    logger.info(`Order confirmation sent to ${user.email} for order ${order.id}: ${info.messageId}`);
+    const { provider, info } = await sendWithFallback(mailOptions);
+    logger.info(`Order confirmation sent to ${user.email} for order ${order.id} via ${provider}: ${info.messageId}`);
   } catch (err) {
     logger.error(`Failed to send order confirmation to ${user.email}:`, err);
     // Fire-and-forget: don't block order flow
