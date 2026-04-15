@@ -28,7 +28,8 @@ export default function ManageProducts() {
     is_spicy: false,
     spice_level: 0,
     preparation_time_minutes: 30,
-    status: 'active'
+    status: 'active',
+    variants: [] as Array<{ name: string; price: string | number; is_available: boolean }>
   });
 
   const { data: productsData, isLoading, refetch } = useQuery({
@@ -49,13 +50,29 @@ export default function ManageProducts() {
 
   const openAddModal = () => {
     setEditingProduct(null);
+    const chickenVariants = [
+      { name: '250g Jar', price: 299, is_available: true },
+      { name: '500g Jar', price: 549, is_available: true },
+      { name: '1kg Special', price: 1049, is_available: true }
+    ];
     setFormData({
       name: '', description: '', price: '', category_id: categoriesData?.[0]?.id || '',
       image_url: '',
       is_vegetarian: true, is_vegan: false, is_gluten_free: false, is_spicy: false,
-      spice_level: 0, preparation_time_minutes: 30, status: 'active'
+      spice_level: 0, preparation_time_minutes: 30, status: 'active',
+      variants: []
     });
     setIsModalOpen(true);
+  };
+
+  const addChickenVariants = () => {
+    const chickenVariants = [
+      { name: '250g Jar', price: 299, is_available: true },
+      { name: '500g Jar', price: 549, is_available: true },
+      { name: '1kg Special', price: 1049, is_available: true }
+    ];
+    setFormData(prev => ({ ...prev, variants: [...prev.variants, ...chickenVariants] }));
+    toast.success('Chicken Pickle variants added!');
   };
 
   const openEditModal = (product: any) => {
@@ -72,9 +89,38 @@ export default function ManageProducts() {
       is_spicy: product.is_spicy,
       spice_level: product.spice_level,
       preparation_time_minutes: product.preparation_time_minutes,
-      status: product.status
+      status: product.status,
+      variants: product.variants || []
     });
     setIsModalOpen(true);
+  };
+
+  const addVariant = () => {
+    setFormData(prev => ({
+      ...prev,
+      variants: [...prev.variants, { name: '', price: '', is_available: true }]
+    }));
+  };
+
+  interface ProductVariant {
+    name: string;
+    price: string | number;
+    is_available: boolean;
+  }
+
+  const updateVariant = (index: number, field: keyof ProductVariant, value: string | number | boolean): void => {
+    setFormData(prev => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = { ...newVariants[index], [field]: field === 'price' ? Number(value) || 0 : value };
+      return { ...prev, variants: newVariants };
+    });
+  };
+
+  const removeVariant = (index: number): void => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index)
+    }));
   };
 
   const handleDelete = async (id: string) => {
@@ -99,13 +145,27 @@ export default function ManageProducts() {
         preparation_time_minutes: Number(formData.preparation_time_minutes)
       };
 
+      let productId;
       if (editingProduct) {
         await apiClient.put(`/products/${editingProduct.id}`, payload);
+        productId = editingProduct.id;
         toast.success('Product updated!');
       } else {
-        await apiClient.post('/products', payload);
+        const response = await apiClient.post('/products', payload);
+        productId = response.data.data.id;
         toast.success('Product created!');
       }
+
+      // Save variants if any
+      if (formData.variants && formData.variants.length > 0) {
+        await apiClient.post(`/products/${productId}/variants`, formData.variants.map(v => ({
+          name: v.name,
+          price: Number(v.price),
+          is_available: v.is_available
+        })));
+        toast.success('Variants saved!');
+      }
+
       setIsModalOpen(false);
       refetch();
     } catch (error: any) {
@@ -388,6 +448,51 @@ export default function ManageProducts() {
                     <input type="checkbox" checked={formData.is_spicy} onChange={(e) => setFormData({...formData, is_spicy: e.target.checked})} className="rounded border-[var(--border-strong)] text-[var(--saffron-500)] focus:ring-[var(--saffron-500)] bg-[var(--bg-card)] w-4 h-4 cursor-pointer" />
                     <span className="text-sm text-[var(--text-secondary)]">Is Spicy</span>
                   </label>
+                </div>
+
+                {/* Variants Section */}
+                <div className="sm:col-span-2 space-y-3">
+                  <label className="text-sm font-medium text-[var(--text-secondary)] flex items-center justify-between">
+                    <span>Product Variants</span>
+                    <Button type="button" size="sm" variant="outline" onClick={addChickenVariants}>
+                      Add Chicken Pickle Variants
+                    </Button>
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto p-2 border border-[var(--border-subtle)] rounded-lg bg-[var(--bg-card)]">
+                    {formData.variants.map((v, index) => (
+                      <div key={index} className="flex gap-2 items-end flex-wrap">
+                        <Input 
+                          placeholder="Variant name (e.g. 250g Jar)" 
+                          value={v.name} 
+                          onChange={(e) => updateVariant(index, 'name', e.target.value)} 
+                          className="flex-1 min-w-[120px]" 
+                        />
+                        <Input 
+                          type="number" 
+                          placeholder="Price (₹)" 
+                          value={v.price} 
+                          onChange={(e) => updateVariant(index, 'price', e.target.value)} 
+                          className="w-28" 
+                        />
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => removeVariant(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                    {formData.variants.length === 0 && (
+                      <p className="text-xs text-[var(--text-muted)] italic text-center py-4">
+                        No variants. Click "Add Chicken Pickle Variants" or add manually.
+                      </p>
+                    )}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
+                    + Add Blank Variant
+                  </Button>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t border-[var(--border-subtle)]">

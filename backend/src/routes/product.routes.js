@@ -17,5 +17,6 @@ router.get('/:id', productController.getProductById);
 router.post('/', authenticate, authorize('admin', 'seller'), validate(schemas.createProduct), productController.createProduct);
 router.put('/:id', authenticate, authorize('admin', 'seller'), productController.updateProduct);
 router.delete('/:id', authenticate, authorize('admin', 'seller'), productController.deleteProduct);
+router.post('/:id/variants', authenticate, authorize('admin', 'seller'), require('../controllers/variantController').createProductVariants);
 
 module.exports = router;

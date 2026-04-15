@@ -171,7 +171,7 @@ export default function ProductDetail() {
                 <div className="mb-8">
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-primary)] mb-3">Select Size / Variant</h3>
                   <div className="flex flex-wrap gap-3">
-                    {productData.variants.map((v: any) => (
+                    {[...new Map(productData.variants.map((v: any) => [v.name, v])).values()].map((v: any) => (
                       <button
                         key={v.id}
                         disabled={!v.is_available}
