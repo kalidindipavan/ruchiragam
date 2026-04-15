@@ -4,7 +4,7 @@ import { apiClient } from '../lib/apiClient';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { LogOut, User, Mail, Phone, Shield, Package, Clock, CheckCircle } from 'lucide-react';
+import { LogOut, User, Mail, Phone, Shield, Package, Clock, CheckCircle, MapPin } from 'lucide-react';
 
 interface OrderItem {
   id: string;
@@ -82,7 +82,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
         {/* Left Column: User Details */}
-        <div className="md:col-span-1 space-y-6">
+<div className="md:col-span-1 space-y-6">
           <Card className="border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-lg overflow-hidden">
             <div className="h-32 bg-gradient-to-br from-[var(--saffron-600)] to-[var(--cherry-red)]"></div>
             <CardContent className="pt-0 relative px-6 pb-6">
@@ -119,6 +119,19 @@ export default function Profile() {
                   <span className="text-sm">Password secured</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--border-subtle)] bg-[var(--bg-card)]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Saved Addresses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Saved Addresses List / Form will be added */}
+              <p className="text-sm text-[var(--text-muted)]">Address management coming soon...</p>
             </CardContent>
           </Card>
 

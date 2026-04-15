@@ -69,7 +69,7 @@ export default function Checkout() {
     setCouponCode('');
   };
 
-  const { register, handleSubmit, formState: { errors } } = useForm<AddressFormValues>({
+const { register, handleSubmit, formState: { errors }, setValue } = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
   });
 
@@ -236,6 +236,31 @@ export default function Checkout() {
                         <CardTitle className="text-xl">Delivery Details</CardTitle>
                      </CardHeader>
                      <CardContent className="space-y-4">
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          className="w-full mb-4"
+                          onClick={async () => {
+                            try {
+                              const { data } = await apiClient.get('/user/addresses');
+                              if (data.data.addresses?.length > 0) {
+                                const defaultAddress = data.data.addresses.find((a: any) => a.is_default) || data.data.addresses[0];
+                                setValue('street', defaultAddress.street);
+                                setValue('city', defaultAddress.city);
+                                setValue('state', defaultAddress.state);
+                                setValue('postal_code', defaultAddress.postal_code);
+                                setValue('phone_number', defaultAddress.phone_number);
+                                toast.success('Address loaded from profile!');
+                              } else {
+                                toast.success('No saved addresses. Add one in profile.');
+                              }
+                            } catch {
+                              toast.error('Failed to load addresses');
+                            }
+                          }}
+                        >
+                          📍 Load from Profile
+                        </Button>
                         <div className="space-y-2">
                            <label className="text-sm font-medium text-[var(--text-secondary)]">Street Address</label>
                            <Input placeholder="House No, Building, Street" {...register('street')} />
