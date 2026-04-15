@@ -92,7 +92,7 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
           city: data.city,
           state: data.state,
           postal_code: data.postal_code,
-          phone_number: data.phone_number,
+          phone: data.phone_number,
         country: 'India',
         },
         payment_provider: paymentProvider,
@@ -283,7 +283,7 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
                         <div className="space-y-2">
                            <label className="text-sm font-medium text-[var(--text-secondary)]">Postal / PIN Code</label>
                            <Input placeholder="500001" {...register('postal_code')} />
-{errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
+                           {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
                         </div>
 
                         <div className="space-y-2">
