@@ -18,6 +18,8 @@ import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
+import OrderSuccess from './pages/OrderSuccess';
+import OrderTracking from './pages/OrderTracking';
 import FAQ from './pages/info/FAQ';
 import ShippingPolicy from './pages/info/ShippingPolicy';
 import Returns from './pages/info/Returns';
@@ -86,6 +88,8 @@ function App() {
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/orders/:id" element={<OrderSuccess />} />
+          <Route path="/orders/:id/track" element={<OrderTracking />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/shipping" element={<ShippingPolicy />} />
           <Route path="/returns" element={<Returns />} />

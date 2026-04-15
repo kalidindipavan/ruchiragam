@@ -56,6 +56,12 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
   // Final Total (Tax removed as per request). Guard against negative totals from aggressive discounts.
   const total = Math.max(subtotal + deliveryFee - discountAmount, 0);
 
+  // Determine initial statuses based on payment provider
+  const isCOD = payment_provider === 'cod';
+  const initialOrderStatus = (total === 0 || isCOD) ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
+  const initialPaymentStatus = (total === 0) ? 'completed' : 'pending'; // COD stays 'pending' until cash collected
+  const initialPaymentId = isCOD ? 'COD' : (total === 0 ? 'FREE_ORDER' : null);
+
   // Create order
   const orderId = uuidv4();
   const { data: order, error: orderError } = await supabase
@@ -63,7 +69,7 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
     .insert({
       id: orderId,
       user_id: userId,
-      status: total === 0 ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING,
+      status: initialOrderStatus,
       subtotal,
       delivery_fee: deliveryFee,
       tax: 0, // Tax removed
@@ -71,8 +77,8 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
       coupon_code: coupon_code || null,
       total,
       payment_provider,
-      payment_status: total === 0 ? 'completed' : 'pending',
-      payment_id: total === 0 ? 'FREE_ORDER' : null,
+      payment_status: initialPaymentStatus,
+      payment_id: initialPaymentId,
       delivery_address,
       special_instructions: special_instructions || null,
     })

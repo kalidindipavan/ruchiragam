@@ -34,6 +34,7 @@ module.exports = {
   PAYMENT_PROVIDER: {
     STRIPE: 'stripe',
     RAZORPAY: 'razorpay',
+    COD: 'cod',
   },
 
   // Product statuses

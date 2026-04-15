@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { CreditCard, Loader2, ArrowLeft, Ticket, Tag, X } from 'lucide-react';
+import { CreditCard, Loader2, ArrowLeft, Ticket, Tag, X, Banknote } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../lib/apiClient';
@@ -39,7 +39,7 @@ export default function Checkout() {
   const { user } = useAuthStore();
   const { items, subtotal, fetchCart } = useCartStore();
   
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay'>('razorpay');
+  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay' | 'cod'>('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discountAmount: number} | null>(null);
@@ -103,6 +103,15 @@ export default function Checkout() {
 
       if (!orderId) {
         throw new Error('Order was created but ID is missing');
+      }
+
+      // COD: order is already confirmed server-side, go directly to success
+      if (paymentProvider === 'cod') {
+        toast.success('Order placed! Pay cash on delivery.');
+        await fetchCart();
+        navigate(`/orders/${orderId}`);
+        setIsProcessing(false);
+        return;
       }
 
       // Free/fully-discounted order: no gateway payment required
@@ -263,19 +272,19 @@ export default function Checkout() {
                         <CardTitle className="text-xl">Payment Method</CardTitle>
                      </CardHeader>
                      <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                            
                            {/* Razorpay (India) */}
                            <div 
                               onClick={() => setPaymentProvider('razorpay')}
                               className={`cursor-pointer rounded-xl border p-4 transition-all ${
                                  paymentProvider === 'razorpay' 
-                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)] focus:ring-[var(--saffron-500)]' 
+                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)]' 
                                  : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--saffron-400)]'
                                }`}
                            >
                               <div className="flex items-center justify-between mb-2">
-                                <span className="font-bold text-lg">Razorpay / UPI</span>
+                                <span className="font-bold text-lg">💳 Razorpay / UPI</span>
                                 <input type="radio" checked={paymentProvider === 'razorpay'} readOnly className="accent-[var(--saffron-500)] w-4 h-4" />
                               </div>
                               <p className="text-xs opacity-80">(Recommended for India) Pay via UPI, Cards, Netbanking.</p>
@@ -286,7 +295,7 @@ export default function Checkout() {
                               onClick={() => setPaymentProvider('stripe')}
                               className={`cursor-pointer rounded-xl border p-4 transition-all ${
                                  paymentProvider === 'stripe' 
-                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)] focus:ring-[var(--saffron-500)]' 
+                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)]' 
                                  : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--saffron-400)]'
                                }`}
                            >
@@ -295,6 +304,22 @@ export default function Checkout() {
                                 <input type="radio" checked={paymentProvider === 'stripe'} readOnly className="accent-[var(--saffron-500)] w-4 h-4" />
                               </div>
                               <p className="text-xs opacity-80">Pay securely via Stripe (International & Domestic Cards).</p>
+                           </div>
+
+                           {/* Cash on Delivery */}
+                           <div 
+                              onClick={() => setPaymentProvider('cod')}
+                              className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                                 paymentProvider === 'cod' 
+                                 ? 'border-[var(--leaf-500)] bg-[var(--leaf-500)]/10 text-[var(--leaf-400)] shadow-[0_0_15px_rgba(34,197,94,0.15)]' 
+                                 : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--leaf-400)]'
+                               }`}
+                           >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-bold text-lg flex items-center gap-2"><Banknote className="w-5 h-5"/> Cash on Delivery</span>
+                                <input type="radio" checked={paymentProvider === 'cod'} readOnly className="accent-[var(--leaf-500)] w-4 h-4" />
+                              </div>
+                              <p className="text-xs opacity-80">Pay with cash when your food arrives at your doorstep.</p>
                            </div>
 
                         </div>
@@ -401,6 +426,8 @@ export default function Checkout() {
                      >
                         {isProcessing ? (
                            <> <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing... </>
+                        ) : paymentProvider === 'cod' ? (
+                           '🛵 Place Order (Cash on Delivery)'
                         ) : (
                            `Pay ${formatINR(total)}`
                         )}
