@@ -9,6 +9,7 @@ const { ORDER_STATUS } = require('../config/constants');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const couponService = require('./couponService');
+const emailService = require('./emailService');
 
 /**
  * Create a new order from user's cart.
@@ -32,7 +33,7 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
   // Validate all products are active
   for (const item of cartItems) {
     if (item.products.status !== 'active') {
-      throw new AppError(`Product "${item.products.name}" is no longer available`, 400);
+      throw new AppError(`Product "${item.products.name}" is no longer available', 400`);
     }
   }
 
@@ -118,9 +119,23 @@ const createOrder = async (userId, { delivery_address, payment_provider, special
   // Increment coupon usage count if applicable
   if (coupon_code) {
     await supabase.rpc('increment_coupon_usage', { coupon_code_param: coupon_code });
-    // If rpc is not set up, we can use a standard update, but RPC is safer for concurrency.
-    // Given the current setup, I'll add a simple update fallback if RPC fails, 
-    // but first I'll add the RPC function to the migration.
+  }
+
+  // Send confirmation email for immediate confirmations (COD/zero total)
+  if (initialOrderStatus === ORDER_STATUS.CONFIRMED) {
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
+      
+      if (userData) {
+        await emailService.sendOrderConfirmationEmail({ ...order, items: orderItems }, userData);
+      }
+    } catch (emailErr) {
+      logger.error(`Failed to send COD confirmation email for order ${orderId}:`, emailErr);
+    }
   }
 
   return { ...order, items: orderItems };
@@ -211,10 +226,20 @@ const markOrderPaid = async (orderId, paymentId) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId)
-    .select('*, order_items(*)')
+    .select('*, order_items(*), users(id, email, full_name)')
     .single();
 
   if (error) throw new AppError('Failed to update order payment status', 500);
+
+  // Send confirmation email on payment success
+  try {
+    if (data.users && data.users.email) {
+      await emailService.sendOrderConfirmationEmail(data, data.users);
+    }
+  } catch (emailErr) {
+    logger.error(`Failed to send payment confirmation email for order ${data.id}:`, emailErr);
+  }
+
   return data;
 };
 
@@ -247,3 +272,4 @@ const getAllOrders = async ({ page = 1, limit = 20, status }) => {
 };
 
 module.exports = { createOrder, getUserOrders, getOrderById, updateOrderStatus, markOrderPaid, getAllOrders };
+

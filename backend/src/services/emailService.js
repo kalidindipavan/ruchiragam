@@ -71,4 +71,117 @@ const sendPasswordResetEmail = async (email, otpCode) => {
   }
 };
 
-module.exports = { sendPasswordResetEmail };
+/**
+ * Send order confirmation email.
+ * @param {object} order - Order object with items populated
+ * @param {object} user - User object with email, full_name
+ */
+const sendOrderConfirmationEmail = async (order, user) => {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || '"Ruchi Ragam" <noreply@ruchiragam.com>',
+    to: user.email,
+    subject: `Order #${order.id.slice(-8).toUpperCase()} Confirmed - Thank You!`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+    .header { background: linear-gradient(135deg, #f5890a 0%, #ff8c00 100%); color: white; padding: 2rem; text-align: center; }
+    .order-details { background: #f8f9fa; padding: 2rem; border-radius: 12px; margin: 2rem 0; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f9fa; font-weight: 600; }
+    .total { font-size: 1.2em; font-weight: bold; color: #f5890a; }
+    .address { background: white; padding: 1.5rem; border-left: 4px solid #f5890a; margin: 1rem 0; }
+    .footer { text-align: center; padding: 2rem; color: #666; font-size: 0.9em; }
+    @media (max-width: 600px) { body { padding: 1rem; } table { font-size: 0.9em; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🍛 Order Confirmed!</h1>
+    <p>Thank you for your order, ${user.full_name || 'Customer'}!</p>
+  </div>
+  
+  <div style="padding: 0 2rem;">
+    <h2>Order #${order.id.slice(-8).toUpperCase()} | ${new Date(order.created_at).toLocaleDateString('en-IN')}</h2>
+    
+    <div class="order-details">
+      <h3>Your Order Items</h3>
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${order.items.map(item => `
+            <tr>
+              <td><strong>${item.product_name}</strong>${item.variant_name ? `<br><small>${item.variant_name}</small>` : ''}</td>
+              <td>${item.quantity}</td>
+              <td>₹${item.unit_price.toLocaleString()}</td>
+              <td class="total">₹${item.total_price.toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #f0f0f0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span>Subtotal:</span> <span>₹${order.subtotal.toLocaleString()}</span>
+        </div>
+        ${order.discount_amount > 0 ? `<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: green;">
+          <span>Discount ${order.coupon_code ? `(${order.coupon_code})` : ''}:</span> <span>-₹${order.discount_amount.toLocaleString()}</span>
+        </div>` : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span>Delivery:</span> <span>₹${order.delivery_fee.toLocaleString()}</span>
+        </div>
+        <div class="total" style="display: flex; justify-content: space-between; font-size: 1.3em;">
+          <span>Total:</span> <strong>₹${order.total.toLocaleString()}</strong>
+        </div>
+      </div>
+    </div>
+    
+    ${order.special_instructions ? `
+    <div class="order-details">
+      <h3>Special Instructions</h3>
+      <p>${order.special_instructions}</p>
+    </div>
+    ` : ''}
+    
+    <div class="address">
+      <h3>📍 Delivery Address</h3>
+      <p>${order.delivery_address}</p>
+    </div>
+    
+    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 1.5rem; border-radius: 8px; margin: 2rem 0;">
+      <h3>Next Steps</h3>
+      <p><strong>${order.payment_provider.toUpperCase()} Payment</strong><br>
+      ${order.payment_status === 'completed' ? '✅ Payment received successfully!' : 'Payment pending confirmation.'}</p>
+      <p>You will receive tracking updates via SMS/Email. Expected delivery: 3-5 business days.</p>
+    </div>
+    
+    <div class="footer">
+      <p>Need help? <a href="${env.CLIENT_URL || 'https://ruchiragam.com'}/support" style="color: #f5890a;">Contact Support</a> | 
+      <a href="${env.CLIENT_URL || 'https://ruchiragam.com'}/track" style="color: #f5890a;">Track Order</a></p>
+      <p>&copy; 2026 Ruchi Ragam. Authentic Pachadi & Podi since generations. 🇮🇳</p>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    logger.info(`Order confirmation sent to ${user.email} for order ${order.id}: ${info.messageId}`);
+  } catch (err) {
+    logger.error(`Failed to send order confirmation to ${user.email}:`, err);
+    // Fire-and-forget: don't block order flow
+  }
+};
+
+module.exports = { 
+  sendPasswordResetEmail, 
+  sendOrderConfirmationEmail 
+};
