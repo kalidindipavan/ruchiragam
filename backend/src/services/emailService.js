@@ -123,11 +123,41 @@ const sendPasswordResetEmail = async (email, otpCode) => {
 const sendOrderConfirmationEmail = async (order, user) => {
   const orderCode = (order.id || '').slice(-8).toUpperCase();
   const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
-  const items = Array.isArray(order.items) ? order.items : [];
+  const items = Array.isArray(order.items) ? order.items : (Array.isArray(order.order_items) ? order.order_items : []);
   const formatINR = (value) => `&#8377;${Number(value || 0).toLocaleString('en-IN')}`;
   const customerName = user.full_name || 'Customer';
   const paymentProvider = (order.payment_provider || 'online').toUpperCase();
   const paymentMessage = order.payment_status === 'completed' ? 'Payment received successfully.' : 'Payment is pending confirmation.';
+  const formatAddress = (address) => {
+    if (!address) return 'Address not available';
+    if (typeof address === 'string') return address;
+
+    if (typeof address === 'object') {
+      const structured = [
+        address.full_name || address.name,
+        address.phone,
+        address.address_line1 || address.line1,
+        address.address_line2 || address.line2,
+        address.landmark,
+        address.city,
+        address.state,
+        address.postal_code || address.pincode,
+        address.country,
+      ].filter(Boolean);
+
+      if (structured.length) return structured.join(', ');
+
+      const flatValues = Object.values(address)
+        .filter((value) => value !== null && value !== undefined && typeof value !== 'object')
+        .map((value) => String(value).trim())
+        .filter(Boolean);
+
+      return flatValues.length ? flatValues.join(', ') : 'Address not available';
+    }
+
+    return String(address);
+  };
+  const deliveryAddress = formatAddress(order.delivery_address);
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || '"Ruchi Ragam" <noreply@ruchiragam.com>',
@@ -211,7 +241,7 @@ const sendOrderConfirmationEmail = async (order, user) => {
         </div>
 
         ${order.special_instructions ? `<div class="box"><strong>Special Instructions</strong><p style="margin:8px 0 0 0;">${order.special_instructions}</p></div>` : ''}
-        <div class="box"><strong>Delivery Address</strong><p style="margin:8px 0 0 0;">${order.delivery_address || 'Address not available'}</p></div>
+        <div class="box"><strong>Delivery Address</strong><p style="margin:8px 0 0 0;">${deliveryAddress}</p></div>
         <div class="box"><strong>Need help?</strong> Visit <a class="link" href="${env.CLIENT_URL || 'https://ruchiragam.com'}/support">Support</a> or <a class="link" href="${env.CLIENT_URL || 'https://ruchiragam.com'}/track">Track Order</a>.</div>
       </div>
 
