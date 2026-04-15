@@ -190,7 +190,11 @@ export default function ManageOrders() {
                       {viewingOrder.delivery_address ? (
                         <address className="not-italic text-[var(--text-primary)] leading-relaxed">
                           <span className="font-bold">{viewingOrder.delivery_address.street}</span><br/>
-                          {viewingOrder.delivery_address.city}, {viewingOrder.delivery_address.state} {viewingOrder.delivery_address.postal_code}<br/>
+                          {viewingOrder.delivery_address.city}, {viewingOrder.delivery_address.state} {viewingOrder.delivery_address.postal_code}
+                          {viewingOrder.delivery_address.phone_number && (
+                            <div className="mt-1 text-sm font-medium">📞 +91 {viewingOrder.delivery_address.phone_number}</div>
+                          )}
+                          <br/>
                           {viewingOrder.delivery_address.country}
                         </address>
                       ) : (

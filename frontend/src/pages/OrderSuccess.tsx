@@ -25,6 +25,7 @@ interface Order {
   payment_provider: string;
   payment_status: string;
   delivery_address: {
+    phone_number: any;
     street: string;
     city: string;
     state: string;
@@ -68,7 +69,7 @@ export default function OrderSuccess() {
   if (!order) return null;
 
   const isCOD = order.payment_provider === 'cod';
-  const addressLine = `${order.delivery_address.street}, ${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.postal_code}`;
+  const addressLine = `${order.delivery_address.street}, ${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.postal_code}${order.delivery_address.phone_number ? ` | 📞 +91 ${order.delivery_address.phone_number}` : ''}`;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] py-10 px-4">
