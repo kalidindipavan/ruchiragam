@@ -113,8 +113,12 @@ export default function Home() {
                        <h3 className="font-display font-bold text-[var(--text-primary)] text-lg line-clamp-2 leading-tight group-hover:text-[var(--saffron-400)] transition-colors flex-1">{dish.name}</h3>
                        <div className="mt-4 flex items-center justify-between">
                          <span className="font-bold text-xl text-[var(--text-primary)]">₹{dish.price}</span>
-                         <Button size="sm" className="opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                           View Details
+                         <Button 
+                           asChild 
+                           size="sm" 
+                           className="opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300"
+                         >
+                           <Link to="/products/1">View Details</Link>
                          </Button>
                        </div>
                     </CardContent>
