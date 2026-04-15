@@ -92,10 +92,10 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {/* Dummy data for design */}
                {[
-                 { name: "Andhra Special Avakaya (500g)", price: 349, rating: 4.9, img: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800&q=80", veg: true, spicy: true },
-                 { name: "Spicy Chicken Pickle (250g)", price: 499, rating: 4.8, img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800&q=80", veg: false, spicy: true },
-                 { name: "Guntur Gongura Pachadi", price: 299, rating: 4.7, img: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80", veg: true, spicy: true },
-                 { name: "Authentic Kandi Podi", price: 199, rating: 4.9, img: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&q=80", veg: true, spicy: false }
+{ name: "Andhra Special Avakaya (500g)", id: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a01", price: 349, rating: 4.9, img: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800&q=80", veg: true, spicy: true },
+                 { name: "Spicy Chicken Pickle (250g)", id: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a05", price: 499, rating: 4.8, img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800&q=80", veg: false, spicy: true },
+                 { name: "Guntur Gongura Pachadi", id: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a03", price: 299, rating: 4.7, img: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80", veg: true, spicy: true },
+                 { name: "Authentic Kandi Podi", id: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a07", price: 199, rating: 4.9, img: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&q=80", veg: true, spicy: false }
                ].map((dish, i) => (
                  <Card key={i} className="group overflow-hidden bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--saffron-500)] transition-all duration-300 hover:shadow-saffron-lg flex flex-col">
                     <div className="relative aspect-square overflow-hidden bg-[var(--bg-elevated)] shrink-0">
@@ -118,7 +118,7 @@ export default function Home() {
                            size="sm" 
                            className="opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300"
                          >
-                           <Link to="/products/1">View Details</Link>
+                           <Link to={`/products/${dish.id}`}>View Details</Link>
                          </Button>
                        </div>
                     </CardContent>
