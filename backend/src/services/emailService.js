@@ -175,7 +175,7 @@ const sendPasswordResetEmail = async (email, otpCode) => {
  * @param {object} user - User object with email, full_name
  */
 const sendOrderConfirmationEmail = async (order, user) => {
-  const orderCode = (order.id || '').slice(-8).toUpperCase();
+  const orderCode = (order.id || '').split('-')[0].toUpperCase();
   const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
   const items = Array.isArray(order.items) ? order.items : (Array.isArray(order.order_items) ? order.order_items : []);
   const formatINR = (value) => `&#8377;${Number(value || 0).toLocaleString('en-IN')}`;
@@ -238,6 +238,10 @@ const sendOrderConfirmationEmail = async (order, user) => {
     th { text-align: left; font-size: 13px; color: #7a5a42; background: #fff8ef; padding: 10px 8px; border-bottom: 1px solid #f0e1d0; }
     td { padding: 10px 8px; border-bottom: 1px solid #f7ecdf; vertical-align: top; font-size: 14px; }
     .summary { margin-top: 14px; border-top: 2px solid #f3e3d0; padding-top: 12px; }
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+    .summary-table td { padding: 7px 0; border: 0; font-size: 14px; }
+    .summary-table td:last-child { text-align: right; }
+    .summary-total td { padding-top: 10px; border-top: 1px solid #f3e3d0; font-size: 18px; color: #cf5f17; font-weight: 700; }
     .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin: 6px 0; }
     .discount { color: #0f8a4b; }
     .grand-total { font-size: 18px; color: #cf5f17; font-weight: 700; }
@@ -288,10 +292,14 @@ const sendOrderConfirmationEmail = async (order, user) => {
         </table>
 
         <div class="summary">
-          <div class="summary-row"><span>Subtotal</span><span>${formatINR(order.subtotal)}</span></div>
-          ${Number(order.discount_amount || 0) > 0 ? `<div class="summary-row discount"><span>Discount ${order.coupon_code ? `(${order.coupon_code})` : ''}</span><span>-${formatINR(order.discount_amount)}</span></div>` : ''}
-          <div class="summary-row"><span>Delivery</span><span>${formatINR(order.delivery_fee)}</span></div>
-          <div class="summary-row grand-total"><span>Total</span><span>${formatINR(order.total)}</span></div>
+          <table class="summary-table">
+            <tbody>
+              <tr><td>Subtotal</td><td>${formatINR(order.subtotal)}</td></tr>
+              <tr><td>Delivery</td><td>${formatINR(order.delivery_fee)}</td></tr>
+              ${Number(order.discount_amount || 0) > 0 ? `<tr class="discount"><td>Discount ${order.coupon_code ? `(${order.coupon_code})` : ''}</td><td>-${formatINR(order.discount_amount)}</td></tr>` : ''}
+              <tr class="summary-total"><td>Total</td><td>${formatINR(order.total)}</td></tr>
+            </tbody>
+          </table>
         </div>
 
         ${order.special_instructions ? `<div class="box"><strong>Special Instructions</strong><p style="margin:8px 0 0 0;">${order.special_instructions}</p></div>` : ''}
