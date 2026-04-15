@@ -35,11 +35,17 @@ const getTransporters = () => {
     transporters.push({
       name: 'gmail',
       transporter: nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: gmailUser,
-        pass: gmailPass,
-      },
+        host: 'smtp.gmail.com',
+        port: Number(process.env.GMAIL_SMTP_PORT || 587),
+        secure: (process.env.GMAIL_SMTP_SECURE || 'false') === 'true', // false for 587 (STARTTLS), true for 465
+        requireTLS: true,
+        connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT || 15000),
+        greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT || 10000),
+        socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 20000),
+        auth: {
+          user: gmailUser,
+          pass: gmailPass,
+        },
       }),
     });
   }
