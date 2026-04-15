@@ -29,7 +29,7 @@ const addressSchema = z.object({
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
   postal_code: z.string().min(4, 'Postal code is required'),
-  phone_number: z.string().min(10, 'Phone number required').refine(val => /^\\d{10}$/.test(val), 'Enter valid 10-digit phone'),
+  phone_number: z.string().min(10, 'Phone number required').refine(val => /^[\d\s\+\-]{10,}$/.test(val) && val.replace(/\D/g, '').length >= 10, 'Enter valid 10-digit phone'),
   special_instructions: z.string().optional(),
 });
 
