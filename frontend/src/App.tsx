@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 import { useAuthStore } from './store/authStore';
 import SeoHeadManager from './components/seo/SeoHeadManager';
 
@@ -65,6 +66,7 @@ function App() {
           },
         }}
       />
+      <Analytics />
       <Routes>
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
