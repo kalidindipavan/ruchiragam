@@ -121,6 +121,17 @@ const schemas = {
       coupon_code: z.string().trim().min(1).max(50).optional(),
     }),
   },
+  createReturnClaim: {
+    body: z.object({
+      order_reference: z.string().trim().min(3).max(120),
+      issue_type: z.enum(['damaged', 'wrong_item', 'quality_issue', 'other']),
+      description: z.string().trim().min(15).max(1200),
+      evidence_urls: z.array(z.string().url()).max(5).optional().default([]),
+      contact_name: z.string().trim().min(2).max(100),
+      contact_email: z.string().trim().email(),
+      contact_phone: z.string().trim().min(8).max(20).optional(),
+    }),
+  },
 
   // Reviews
   createReview: {

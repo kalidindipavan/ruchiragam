@@ -33,6 +33,7 @@ const uploadRoutes = require('./routes/upload.routes');
 const userRoutes = require('./routes/user.routes');
 const statsRoutes = require('./routes/stats.routes');
 const couponRoutes = require('./routes/couponRoutes');
+const returnClaimRoutes = require('./routes/returnClaim.routes');
 
 const app = express();
 
@@ -145,6 +146,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/returns', returnClaimRoutes);
 
 // ─── 404 + Error Handlers ─────────────────────────────────────────────────────
 

@@ -1,7 +1,77 @@
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
+import toast from 'react-hot-toast';
 import { Card, CardContent } from '../../components/ui/card';
-import { RefreshCcw, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { RefreshCcw, AlertTriangle, ShieldAlert, Send } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { apiClient } from '../../lib/apiClient';
+
+type IssueType = 'damaged' | 'wrong_item' | 'quality_issue' | 'other';
 
 export default function Returns() {
+  const user = useAuthStore((state) => state.user);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    order_reference: '',
+    issue_type: 'damaged' as IssueType,
+    description: '',
+    evidence_urls: '',
+  });
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      contact_name: prev.contact_name || user?.full_name || '',
+      contact_email: prev.contact_email || user?.email || '',
+      contact_phone: prev.contact_phone || user?.phone || '',
+    }));
+  }, [user]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (form.description.trim().length < 15) {
+      toast.error('Please add a few more details so we can resolve this quickly.');
+      return;
+    }
+
+    const evidence = form.evidence_urls
+      .split(/\n|,/g)
+      .map((url) => url.trim())
+      .filter(Boolean);
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('/returns/claims', {
+        contact_name: form.contact_name.trim(),
+        contact_email: form.contact_email.trim(),
+        contact_phone: form.contact_phone.trim() || undefined,
+        order_reference: form.order_reference.trim(),
+        issue_type: form.issue_type,
+        description: form.description.trim(),
+        evidence_urls: evidence,
+      });
+
+      toast.success('Claim submitted successfully. Our team will review it shortly.');
+      setForm((prev) => ({
+        ...prev,
+        order_reference: '',
+        issue_type: 'damaged',
+        description: '',
+        evidence_urls: '',
+      }));
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Unable to submit claim right now. Please try again.';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-16">
       <div className="mb-12">
@@ -65,6 +135,117 @@ export default function Returns() {
         </ul>
         <p>Our kitchen management team will review the claim and initiate a rapid-replacement dispatch within 12 business hours.</p>
       </div>
+
+      <Card className="mt-12 border-[var(--border-subtle)] bg-[var(--bg-card)]">
+        <CardContent className="p-6 sm:p-8">
+          <h2 className="text-2xl font-display font-bold text-[var(--saffron-400)] mb-2">Submit Claim Online</h2>
+          <p className="text-[var(--text-secondary)] mb-6">
+            Share the issue details below and our support team will review your claim.
+          </p>
+
+          {!user && (
+            <p className="mb-6 rounded-md border border-[var(--saffron-500)]/30 bg-[var(--saffron-500)]/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+              Tip: If you are logged in, we auto-fill your contact details for faster submission.
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-secondary)]">Full Name</label>
+                <Input
+                  required
+                  value={form.contact_name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contact_name: e.target.value }))}
+                  placeholder="Your full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-secondary)]">Email</label>
+                <Input
+                  required
+                  type="email"
+                  value={form.contact_email}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contact_email: e.target.value }))}
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-secondary)]">Phone (Optional)</label>
+                <Input
+                  value={form.contact_phone}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contact_phone: e.target.value }))}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-secondary)]">Order Reference</label>
+                <Input
+                  required
+                  value={form.order_reference}
+                  onChange={(e) => setForm((prev) => ({ ...prev, order_reference: e.target.value }))}
+                  placeholder="#ORDER-123 or order ID"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-secondary)]">Issue Type</label>
+              <select
+                required
+                value={form.issue_type}
+                onChange={(e) => setForm((prev) => ({ ...prev, issue_type: e.target.value as IssueType }))}
+                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              >
+                <option value="damaged">Damaged / Broken Jar</option>
+                <option value="wrong_item">Wrong Item Delivered</option>
+                <option value="quality_issue">Quality Issue</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-secondary)]">Description</label>
+              <textarea
+                required
+                minLength={15}
+                rows={5}
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Please describe what happened so we can resolve it quickly."
+                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--saffron-500)] resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-secondary)]">Photo Links (Optional)</label>
+              <textarea
+                rows={3}
+                value={form.evidence_urls}
+                onChange={(e) => setForm((prev) => ({ ...prev, evidence_urls: e.target.value }))}
+                placeholder="Paste photo URLs, separated by commas or new lines"
+                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--saffron-500)] resize-none"
+              />
+            </div>
+
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Submitting...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  Submit Claim <Send className="h-4 w-4" />
+                </span>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

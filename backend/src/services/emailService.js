@@ -326,7 +326,63 @@ const sendOrderConfirmationEmail = async (order, user) => {
   }
 };
 
+/**
+ * Send replacement-claim notification to support.
+ * @param {object} claim
+ * @param {object|null} user
+ */
+const sendReplacementClaimEmail = async (claim, user = null) => {
+  const supportEmail = process.env.SUPPORT_EMAIL || 'ruchiragamsupport@gmail.com';
+  const customerName = claim.contact_name || user?.full_name || 'Customer';
+  const lines = [
+    `Claim ID: ${claim.id}`,
+    `Order Reference: ${claim.order_reference}`,
+    `Issue Type: ${claim.issue_type}`,
+    `Submitted At: ${new Date(claim.created_at || Date.now()).toLocaleString('en-IN')}`,
+    `Customer Name: ${customerName}`,
+    `Customer Email: ${claim.contact_email || user?.email || 'N/A'}`,
+    `Customer Phone: ${claim.contact_phone || 'N/A'}`,
+    `User ID: ${claim.user_id || user?.id || 'Guest'}`,
+  ];
+
+  const evidence = Array.isArray(claim.evidence_urls) ? claim.evidence_urls.filter(Boolean) : [];
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || '"Ruchi Ragam" <noreply@ruchiragam.com>',
+    to: supportEmail,
+    subject: `Replacement Claim Received - ${claim.order_reference}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; color: #2b2b2b;">
+        <h2 style="color:#cf5f17;">New Replacement Claim Submitted</h2>
+        <p>A customer submitted a replacement claim from the Returns page.</p>
+        <div style="background:#fff7ee;border:1px solid #f3dfc9;border-radius:10px;padding:14px 16px;">
+          ${lines.map((line) => `<p style="margin:6px 0;">${line}</p>`).join('')}
+        </div>
+
+        <h3 style="margin-top:20px;color:#a14e11;">Issue Description</h3>
+        <p style="line-height:1.6; white-space: pre-wrap;">${claim.description}</p>
+
+        ${evidence.length ? `
+          <h3 style="margin-top:20px;color:#a14e11;">Evidence Links</h3>
+          <ul>
+            ${evidence.map((url) => `<li><a href="${url}" target="_blank" rel="noreferrer">${url}</a></li>`).join('')}
+          </ul>
+        ` : '<p><strong>Evidence Links:</strong> None provided</p>'}
+      </div>
+    `,
+  };
+
+  try {
+    const { provider, info } = await sendWithFallback(mailOptions);
+    logger.info(`Replacement claim email sent for claim ${claim.id} via ${provider}: ${info.messageId}`);
+  } catch (err) {
+    logger.error(`Failed to send replacement claim email for claim ${claim.id}:`, err);
+    throw err;
+  }
+};
+
 module.exports = { 
   sendPasswordResetEmail, 
-  sendOrderConfirmationEmail 
+  sendOrderConfirmationEmail,
+  sendReplacementClaimEmail,
 };
