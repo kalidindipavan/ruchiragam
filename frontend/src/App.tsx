@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import SeoHeadManager from './components/seo/SeoHeadManager';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -53,6 +54,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <SeoHeadManager />
       <Toaster
         position="top-right"
         toastOptions={{
