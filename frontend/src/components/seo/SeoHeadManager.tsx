@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const SITE_NAME = 'Ruchi Ragam';
-const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://ruchiragam.com').replace(/\/$/, '');
+//const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://ruchiragam.com').replace(/\/$/, '');
+const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://ruchiragam.vercel.app').replace(/\/$/, '');
+
 
 const DEFAULT_DESCRIPTION =
   'Ruchi Ragam brings authentic Telugu pickles, homemade flavors, and traditional Indian food crafted with care.';
