@@ -38,8 +38,8 @@ function Footer() {
             <h3 className="font-semibold text-[var(--text-primary)] uppercase tracking-wider text-sm mb-4">Contact</h3>
             <ul className="flex flex-col space-y-2 text-sm text-[var(--text-secondary)]">
               <li>ruchiragamsupport@gmail.com</li>
-              <li>+91 98765 43210</li>
-              <li className="pt-2">Hyderabad, Telangana<br />India - 500081</li>
+              <li>+91 76740 85003</li>
+              <li className="pt-2">Juvvalapalem, Andhra Pradesh<br />India - 531236</li>
             </ul>
           </div>
         </div>
