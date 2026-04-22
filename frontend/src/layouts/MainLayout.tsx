@@ -30,7 +30,6 @@ function Footer() {
               <li><a href="/support" className="flex items-center gap-1.5 text-[var(--saffron-500)] hover:text-[var(--saffron-400)] transition font-medium">Support Hub &rarr;</a></li>
               <li><a href="/faq" className="hover:text-[var(--saffron-400)] transition">FAQ</a></li>
               <li><a href="/shipping" className="hover:text-[var(--saffron-400)] transition">Shipping Policy</a></li>
-              <li><a href="/returns" className="hover:text-[var(--saffron-400)] transition">Returns</a></li>
               <li><a href="/contact" className="hover:text-[var(--saffron-400)] transition">Contact Us</a></li>
             </ul>
           </div>

@@ -50,14 +50,6 @@ const routeMeta = (pathname: string): SeoMeta => {
     };
   }
 
-  if (pathname === '/returns') {
-    return {
-      title: 'Returns & Replacements | Ruchi Ragam',
-      description:
-        'Read Ruchi Ragam return and replacement policy, and submit replacement claims quickly online.',
-    };
-  }
-
   if (pathname === '/faq') {
     return {
       title: 'FAQ | Ruchi Ragam',
@@ -117,4 +109,3 @@ export default function SeoHeadManager() {
 
   return null;
 }
-

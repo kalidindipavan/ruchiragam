@@ -70,7 +70,7 @@ export default function ShippingPolicy() {
 
         <h2 className="text-2xl font-bold mb-4 font-display">Damages in Transit</h2>
         <p>
-          While we boast an incredible success rate with our packaging, accidents in logistics happen. If you receive a jar that has leaked severely, cracked, or broken, please take a photograph immediately while it is still in the box. Head over to our <a href="/returns" className="text-[var(--saffron-400)] hover:underline">Returns & Replacements</a> policy for straightforward instructions on how to claim your rapid replacement!
+          While we boast an incredible success rate with our packaging, accidents in logistics happen. If you receive a jar that has leaked severely, cracked, or broken, please take a photograph immediately while it is still in the box and contact our support team through the <a href="/contact" className="text-[var(--saffron-400)] hover:underline">Contact Us</a> page for assistance.
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
-import { HelpCircle, Truck, Package, MessageSquare } from 'lucide-react';
+import { HelpCircle, Truck, MessageSquare } from 'lucide-react';
 
 export default function Support() {
   const navigate = useNavigate();
@@ -19,13 +19,6 @@ export default function Support() {
       icon: <HelpCircle className="h-8 w-8 text-green-400" />,
       path: "/faq",
       bgClass: "bg-green-500/10 border-green-500/20 hover:border-green-500/50"
-    },
-    {
-      title: "Returns & Replacements",
-      description: "Received a broken jar? Learn how to get it instantly replaced.",
-      icon: <Package className="h-8 w-8 text-red-400" />,
-      path: "/returns",
-      bgClass: "bg-red-500/10 border-red-500/20 hover:border-red-500/50"
     },
     {
       title: "Contact the Kitchen",

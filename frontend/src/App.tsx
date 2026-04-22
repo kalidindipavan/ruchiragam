@@ -23,7 +23,6 @@ import OrderSuccess from './pages/OrderSuccess';
 import OrderTracking from './pages/OrderTracking';
 import FAQ from './pages/info/FAQ';
 import ShippingPolicy from './pages/info/ShippingPolicy';
-import Returns from './pages/info/Returns';
 import ContactUs from './pages/info/ContactUs';
 import Support from './pages/info/Support';
 import About from './pages/info/About';
@@ -94,7 +93,6 @@ function App() {
           <Route path="/orders/:id/track" element={<OrderTracking />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/shipping" element={<ShippingPolicy />} />
-          <Route path="/returns" element={<Returns />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/support" element={<Support />} />
           <Route path="/about" element={<About />} />
