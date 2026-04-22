@@ -133,14 +133,45 @@ const updateProduct = async (id, updateData, userId, userRole) => {
     throw new AppError('Not authorized to update this product', 403);
   }
 
+  // Only allow real products-table columns to be updated.
+  // This prevents payload extras (e.g. variants array) from causing DB errors.
+  const allowedFields = new Set([
+    'name',
+    'description',
+    'price',
+    'category_id',
+    'image_url',
+    'images',
+    'status',
+    'is_vegetarian',
+    'is_vegan',
+    'is_gluten_free',
+    'is_spicy',
+    'spice_level',
+    'preparation_time_minutes',
+    'tags',
+    'available_days',
+    'max_orders_per_day',
+    'seo_description',
+  ]);
+
+  const sanitizedUpdate = Object.fromEntries(
+    Object.entries(updateData || {}).filter(([key]) => allowedFields.has(key))
+  );
+
+  sanitizedUpdate.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('products')
-    .update({ ...updateData, updated_at: new Date().toISOString() })
+    .update(sanitizedUpdate)
     .eq('id', id)
     .select('*')
     .single();
 
-  if (error) throw new AppError('Failed to update product', 500);
+  if (error) {
+    logger.error('updateProduct error:', error);
+    throw new AppError('Failed to update product', 500);
+  }
   return data;
 };
 
