@@ -59,20 +59,38 @@ const getProducts = async ({ page = 1, limit = DEFAULT_PAGE_SIZE, sort = 'create
  * Get single product by ID with full details (variants, reviews sample).
  */
 const getProductById = async (id) => {
-  const { data, error } = await supabase
+  const { data: product, error: productError } = await supabase
     .from('products')
     .select(`
       *,
       categories ( id, name, slug ),
       users ( id, full_name, avatar_url ),
-      variants ( id, name, price, is_available ),
-      reviews ( id, rating, comment, created_at, users ( id, full_name, avatar_url ) )
+      variants ( id, name, price, is_available )
     `)
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) throw new AppError('Product not found', 404);
-  return data;
+  if (productError) {
+    logger.error('getProductById product query error:', productError);
+    throw new AppError('Failed to fetch product', 500);
+  }
+  if (!product) throw new AppError('Product not found', 404);
+
+  const { data: reviews, error: reviewsError } = await supabase
+    .from('reviews')
+    .select(`
+      id, rating, comment, created_at,
+      users ( id, full_name, avatar_url )
+    `)
+    .eq('product_id', id)
+    .order('created_at', { ascending: false });
+
+  if (reviewsError) {
+    logger.warn('getProductById reviews query failed, returning product without reviews:', reviewsError);
+    return { ...product, reviews: [] };
+  }
+
+  return { ...product, reviews: reviews || [] };
 };
 
 /**

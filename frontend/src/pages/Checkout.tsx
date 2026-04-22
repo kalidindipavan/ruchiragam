@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { CreditCard, Loader2, ArrowLeft, Ticket, Tag, X, Banknote } from 'lucide-react';
+import { Loader2, ArrowLeft, Ticket, Tag, X, Banknote } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../lib/apiClient';
@@ -12,17 +12,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { formatINR } from '../lib/utils';
-
-// Load Razorpay script dynamically
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
 
 const addressSchema = z.object({
   street: z.string().min(5, 'Street address is required'),
@@ -40,7 +29,7 @@ export default function Checkout() {
   const { user } = useAuthStore();
   const { items, subtotal, fetchCart } = useCartStore();
   
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay' | 'cod'>('razorpay');
+  const paymentProvider = 'cod' as const;
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discountAmount: number} | null>(null);
@@ -132,96 +121,15 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
       });
 
       const orderId = orderResponse.data?.id;
-      const orderTotal = Number(orderResponse.data?.total || 0);
-
       if (!orderId) {
         throw new Error('Order was created but ID is missing');
       }
 
-      // COD: order is already confirmed server-side, go directly to success
-      if (paymentProvider === 'cod') {
-        toast.success('Order placed! Pay cash on delivery.');
-        await fetchCart();
-        navigate(`/orders/${orderId}`);
-        setIsProcessing(false);
-        return;
-      }
-
-      // Free/fully-discounted order: no gateway payment required
-      if (orderTotal <= 0) {
-        toast.success('Order placed successfully!');
-        await fetchCart();
-        navigate(`/orders/${orderId}`);
-        setIsProcessing(false);
-        return;
-      }
-
-      // 2. Initiate Payment
-      if (paymentProvider === 'stripe') {
-        const { data: stripeResponse } = await apiClient.post('/payments/stripe/create', { order_id: orderId });
-        // Redirect to Stripe Checkout
-        window.location.href = stripeResponse.data.sessionUrl;
-      } 
-      else if (paymentProvider === 'razorpay') {
-        const res = await loadRazorpayScript();
-        if (!res) {
-           toast.error('Razorpay SDK failed to load. Are you online?');
-           setIsProcessing(false);
-           return;
-        }
-
-        const { data: rzpResponse } = await apiClient.post('/payments/razorpay/create', { order_id: orderId });
-        const { razorpayOrderId, amount, currency, keyId, prefill } = rzpResponse.data;
-
-        const options = {
-          key: keyId,
-          amount: amount.toString(),
-          currency: currency,
-          name: 'Ruchi Ragam',
-          description: 'Authentic Indian Food Order',
-          image: '/logo.png', // Add a logo asset layer
-          order_id: razorpayOrderId,
-          handler: async function (response: any) {
-             try {
-               await apiClient.post('/payments/razorpay/verify', {
-                 razorpay_order_id: response.razorpay_order_id,
-                 razorpay_payment_id: response.razorpay_payment_id,
-                 razorpay_signature: response.razorpay_signature,
-                 order_id: orderId,
-               });
-               toast.success('Payment successful!');
-               await fetchCart(); // Clear cart in UI
-               navigate(`/orders/${orderId}`); // Take to order success page
-             } catch (err) {
-               toast.error('Payment verification failed.');
-             }
-          },
-          prefill: {
-            name: prefill.name,
-            email: prefill.email,
-            contact: prefill.contact,
-          },
-          readonly: {
-            contact: true,
-            email: true,
-          },
-          timeout: 600, // 10 minutes session timeout
-          retry: {
-            enabled: true,
-            max_count: 3,
-          },
-          theme: {
-            color: '#f5890a',
-          },
-        };
-
-        const rzp1 = new (window as any).Razorpay(options);
-        rzp1.on('payment.failed', function (response: any){
-           toast.error(`Payment Failed: ${response.error.description}`);
-        });
-        rzp1.open();
-        setIsProcessing(false);
-      }
+      toast.success('Order placed! Pay cash on delivery.');
+      await fetchCart();
+      navigate(`/orders/${orderId}`);
+      setIsProcessing(false);
+      return;
     } catch (error: any) {
       console.error('Checkout error:', error);
       const serverMessage = error.response?.data?.message;
@@ -330,66 +238,23 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
                      </CardContent>
                   </Card>
 
-                  {/* Payment Method */}
+                                    {/* Payment Method */}
                   <Card className="bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-sm">
                      <CardHeader>
                         <CardTitle className="text-xl">Payment Method</CardTitle>
                      </CardHeader>
                      <CardContent>
                         <div className="grid grid-cols-1 gap-4">
-                           
-                           {/* Razorpay (India) */}
-                           <div 
-                              onClick={() => setPaymentProvider('razorpay')}
-                              className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                                 paymentProvider === 'razorpay' 
-                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)]' 
-                                 : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--saffron-400)]'
-                               }`}
-                           >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="font-bold text-lg">💳 Razorpay / UPI</span>
-                                <input type="radio" checked={paymentProvider === 'razorpay'} readOnly className="accent-[var(--saffron-500)] w-4 h-4" />
-                              </div>
-                              <p className="text-xs opacity-80">(Recommended for India) Pay via UPI, Cards, Netbanking.</p>
-                           </div>
-
-                           {/* Stripe (International/Cards) */}
-                           <div 
-                              onClick={() => setPaymentProvider('stripe')}
-                              className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                                 paymentProvider === 'stripe' 
-                                 ? 'border-[var(--saffron-500)] bg-[var(--saffron-500)]/10 text-[var(--saffron-400)] shadow-[0_0_15px_rgba(245,137,10,0.15)]' 
-                                 : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--saffron-400)]'
-                               }`}
-                           >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="font-bold text-lg flex items-center gap-2"><CreditCard className="w-5 h-5"/> Credit Card</span>
-                                <input type="radio" checked={paymentProvider === 'stripe'} readOnly className="accent-[var(--saffron-500)] w-4 h-4" />
-                              </div>
-                              <p className="text-xs opacity-80">Pay securely via Stripe (International & Domestic Cards).</p>
-                           </div>
-
-                           {/* Cash on Delivery */}
-                           <div 
-                              onClick={() => setPaymentProvider('cod')}
-                              className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                                 paymentProvider === 'cod' 
-                                 ? 'border-[var(--leaf-500)] bg-[var(--leaf-500)]/10 text-[var(--leaf-400)] shadow-[0_0_15px_rgba(34,197,94,0.15)]' 
-                                 : 'border-[var(--border-strong)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:border-[var(--leaf-400)]'
-                               }`}
-                           >
+                           <div className="rounded-xl border p-4 transition-all border-[var(--leaf-500)] bg-[var(--leaf-500)]/10 text-[var(--leaf-400)] shadow-[0_0_15px_rgba(34,197,94,0.15)]">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="font-bold text-lg flex items-center gap-2"><Banknote className="w-5 h-5"/> Cash on Delivery</span>
-                                <input type="radio" checked={paymentProvider === 'cod'} readOnly className="accent-[var(--leaf-500)] w-4 h-4" />
+                                <input type="radio" checked readOnly className="accent-[var(--leaf-500)] w-4 h-4" />
                               </div>
                               <p className="text-xs opacity-80">Pay with cash when your food arrives at your doorstep.</p>
                            </div>
-
                         </div>
                      </CardContent>
-                  </Card>
-               </form>
+                  </Card></form>
             </div>
 
             {/* Order Summary */}
@@ -490,10 +355,8 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
                      >
                         {isProcessing ? (
                            <> <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing... </>
-                        ) : paymentProvider === 'cod' ? (
-                           '🛵 Place Order (Cash on Delivery)'
                         ) : (
-                           `Pay ${formatINR(total)}`
+                           'Place Order (Cash on Delivery)'
                         )}
                      </Button>
                      <p className="text-center text-xs text-[var(--text-muted)] mt-4">
@@ -507,3 +370,4 @@ const { register, handleSubmit, formState: { errors }, setValue } = useForm<Addr
     </div>
   );
 }
+

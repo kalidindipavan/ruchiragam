@@ -24,11 +24,11 @@ const getDashboardStats = async (req, res) => {
 
     const totalRevenue = salesData.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
 
-    // 2. Count Active Orders (Pending or Processing)
+    // 2. Count Active Orders (Pending/Confirmed/Preparing)
     const { count: pendingOrders, error: pendingError } = await supabase
       .from('orders')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['pending', 'processing', 'confirmed']);
+      .in('status', ['pending', 'confirmed', 'preparing']);
 
     if (pendingError) throw pendingError;
 
